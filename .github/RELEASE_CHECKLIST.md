@@ -6,7 +6,7 @@
 - [ ] Run `npm run bench -- --output benchmark.json`; inspect provenance and claim boundaries.
 - [ ] Run `npm audit --omit=dev`.
 - [ ] Run secret and forbidden-file scans against tracked files and the packed tarball.
-- [ ] Run `npm pack --ignore-scripts` twice and confirm byte-identical SHA-256 digests.
+- [ ] Run `npm pack --ignore-scripts` twice and confirm the unpacked payload file set and per-file SHA-256 digests are identical.
 - [ ] Install the tarball into a fresh DSH profile and run `--dump-config`.
 - [ ] Confirm README install URLs, version, Node/DSH versions and both language documents.
 - [ ] Create an immutable prerelease tag and attach the reviewed tarball plus benchmark artifact.

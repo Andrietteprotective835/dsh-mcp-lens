@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-lens",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.0-rc.6",
   "description": "Cut MCP context and API cost in DeepSeek Harness with two model-facing tools, lazy discovery, and exact-schema calls",
   "keywords": [
     "deepseek",
@@ -44,6 +44,7 @@
     "docs/LIVE_DEEPSEEK_PILOT.md",
     "docs/LIVE_DEEPSEEK_PILOT.zh-CN.md",
     "LICENSE",
+    "scripts",
     "tsconfig.json",
     "tsdown.config.ts"
   ],
@@ -97,7 +98,7 @@
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "bench": "tsx benchmark/run.ts",
-    "verify": "npm run typecheck && npm run test && npm run build"
+    "bench": "node ./scripts/run-bench.mjs",
+    "verify": "node ./scripts/run-verify.mjs"
   }
 }
