@@ -34,6 +34,7 @@ function localMarkdownTargets(markdown: string): string[] {
 }
 
 const frozenPilotDate = '2026-08-14'
+const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334222997/ee14cb30-45a1-42fb-bb6b-e606ec8b3078'
 
 describe('catalog calculator publishing contract', () => {
   it('ships every referenced static asset and required DOM target', async () => {
@@ -66,6 +67,25 @@ describe('catalog calculator publishing contract', () => {
     expect(html).toMatch(/<script\s+type=["']module["']\s+src=["']\.\/app\.js["']><\/script>/)
     expect(html).toContain('only the measurement summary and claim boundary')
     expect(html).not.toContain('includes the exact inputs')
+  })
+
+  it('publishes stable homepage metadata for search and social crawlers', async () => {
+    const html = await readFile(join(siteRoot, 'index.html'), 'utf8')
+
+    expect(html).toContain('rel="canonical" href="https://labmimors.github.io/dsh-mcp-lens/"')
+    expect(html).toContain('rel="alternate" hreflang="en" href="https://labmimors.github.io/dsh-mcp-lens/"')
+    expect(html).toContain('rel="alternate" hreflang="x-default" href="https://labmimors.github.io/dsh-mcp-lens/"')
+    expect(html).toContain('<meta property="og:type" content="website" />')
+    expect(html).toContain('<meta property="og:site_name" content="MCP Lens" />')
+    expect(html).toContain('<meta property="og:locale" content="en_US" />')
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />')
+    expect(html).toContain('<meta name="twitter:title" content="MCP Lens Catalog Calculator" />')
+    expect(html).toContain(`<meta property="og:image" content="${repositoryImageUrl}" />`)
+    expect(html).toContain(`<meta name="twitter:image" content="${repositoryImageUrl}" />`)
+    expect(html).toContain('"@type": "WebApplication"')
+    expect(html).toContain('"applicationCategory": "DeveloperApplication"')
+    expect(html).toContain('"url": "https://labmimors.github.io/dsh-mcp-lens/"')
+    expect(html).not.toContain('localhost')
   })
 
   it('keeps calculator execution local and avoids HTML injection sinks', async () => {
@@ -142,6 +162,10 @@ describe('catalog calculator publishing contract', () => {
     for (const html of [english, chinese]) {
       expect(html).toContain('hreflang="en"')
       expect(html).toContain('hreflang="zh-CN"')
+      expect(html).toContain('<meta property="og:site_name" content="MCP Lens" />')
+      expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />')
+      expect(html).toContain(`<meta property="og:image" content="${repositoryImageUrl}" />`)
+      expect(html).toContain(`<meta name="twitter:image" content="${repositoryImageUrl}" />`)
       expect(html).toContain(`"datePublished": "${frozenPilotDate}"`)
       expect(html).toContain(`"dateModified": "${frozenPilotDate}"`)
       expect(html).toContain('674,249 B')
@@ -157,10 +181,16 @@ describe('catalog calculator publishing contract', () => {
 
     expect(english).toContain('pricing retrieved on August 14, 2026')
     expect(english).toContain('Published August 14, 2026')
+    expect(english).toContain('<meta property="og:locale" content="en_US" />')
+    expect(english).toContain('<meta property="og:locale:alternate" content="zh_CN" />')
+    expect(english).toContain('<meta name="twitter:title" content="The 1,000-tool tax: measuring large MCP catalogs" />')
     expect(english).toContain('href="../"')
     expect(english).toContain('href="../zh-CN/1000-tool-tax/"')
     expect(chinese).toContain('2026-08-14 抓取的 DeepSeek 价格')
     expect(chinese).toContain('发布于 2026-08-14')
+    expect(chinese).toContain('<meta property="og:locale" content="zh_CN" />')
+    expect(chinese).toContain('<meta property="og:locale:alternate" content="en_US" />')
+    expect(chinese).toContain('<meta name="twitter:title" content="1000 个工具的固定成本：实测大型 MCP 目录" />')
     expect(chinese).toContain('href="../../"')
     expect(chinese).toContain('href="../../1000-tool-tax/"')
     expect(english).toContain('aggregate usage accounting')
