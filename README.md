@@ -1,5 +1,7 @@
 # dsh-mcp-lens
 
+![MCP Lens hero](assets/mcp-lens-hero.webp)
+
 `dsh-mcp-lens` turns a large MCP estate into **two fixed model-facing tools** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness):
 
 - constant standing tool surface, regardless of whether the profile has 10 or 1,000 remote MCP tools,
