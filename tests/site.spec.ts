@@ -51,6 +51,7 @@ const frozenPilotDate = '2026-08-14'
 const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334222997/ee14cb30-45a1-42fb-bb6b-e606ec8b3078'
 const lensReleaseCandidate = '0.1.0-rc.7'
 const harnessPilotVersion = '0.1.0-rc.6'
+const immutableCandidateRevision = 'f21169f921e7ed032a4db5062685afb6f948c2d1'
 
 describe('catalog calculator publishing contract', () => {
   it('ships every referenced static asset and required DOM target', async () => {
@@ -332,9 +333,14 @@ describe('catalog calculator publishing contract', () => {
       expect(readme).toContain(`labmimors/dsh-mcp-lens@v${lensReleaseCandidate}`)
       expect(readme).toContain(`github:labmimors/dsh-mcp-lens#v${lensReleaseCandidate}`)
       expect(readme).toContain(`/releases/tag/v${lensReleaseCandidate}`)
+      expect(readme).toContain(`labmimors/dsh-mcp-lens@${immutableCandidateRevision}`)
+      expect(readme).toContain(`\`${immutableCandidateRevision}\``)
       expect(readme).not.toContain('/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz')
       expect(readme).not.toContain('labmimors/dsh-mcp-lens@v0.1.0-rc.6')
       expect(readme).not.toContain('github:labmimors/dsh-mcp-lens#v0.1.0-rc.6')
+      expect(readme).not.toContain('51cd0ec8d953576507a404cb06034842914b5b5c')
+      expect(readme).not.toContain('6a7e006fd63887fecf2ce1e70a54af26e0df1378')
+      expect(readme).not.toContain('47285d39bf267d71d196ffaec7ca58a380204566')
     }
 
     expect(englishPilot).toContain(`DeepSeek Harness: \`${harnessPilotVersion}\``)
