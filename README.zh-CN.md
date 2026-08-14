@@ -7,16 +7,37 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-developer%20preview-5B5BD6)](https://github.com/deepseek-ai/deepseek-harness)
 
-**让大型 MCP 工具库少占上下文、少花 API 费用。**
+**把大型 MCP 工具库收缩成模型只看见的两个工具。**
 
-MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个远端工具。它不会在每轮请求中塞入全部工具 Schema，而是只在需要工具时，为少量排序候选揭示准确 Schema。
+MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个远端工具。它不会在每轮请求中塞入全部工具 Schema，而是只在真正需要工具时，为少量排序候选揭示准确 Schema。
 
-先看结果：
+用户最关心的四件事：
 
-- 大型 MCP 工具库常驻上下文更小：三项任务实测里，`request/header.tools` JSON 从 `674,249 B` 降到 `27,401 B`。
-- 输入成本压力更低：同一组样本里，V4 Flash 预估费用从 `$0.0307204` 降到 `$0.0034707`。
-- 完成率没有靠“缩能力”换出来：两侧都完成了 `3/3` 个已测任务。
-- 工具偏移和风险更可控：模型只会看到排序候选的准确 Schema，而最终 `server/tool` 仍受 `allowTools` / `denyTools` 限制。
+- 更省输入成本：在带日期的三任务实测里，DeepSeek V4 Flash 预估费用从 `$0.0307204` 降到 `$0.0034707`。
+- 更少占上下文：同一组实测里，`request/header.tools` JSON 从 `674,249 B` 降到 `27,401 B`。
+- 更不容易选错工具：模型只会看到排序候选的准确 Schema，最终 `server/tool` 仍然受 `allowTools` / `denyTools` 限制。
+- 不是靠“压缩能力”换结果：真模型实测里，两侧都完成了 `3/3` 个任务。
+
+如果你有几十到几千个 MCP 工具、多个 Server，或者很多长尾能力不值得每轮都暴露给模型，这个插件适合你。只有几个固定工具、而且几乎每轮都会用到时，直接客户端通常更简单。
+
+## 30 秒安装
+
+前置要求：DeepSeek Harness `0.1.0-rc.6`、Node.js `^22.19.0` 或 `>=24.0.0`，并且 `pnpm` 已在 `PATH` 中。`dsh plugin` 会把安装交给 pnpm 执行。
+
+把预编译 Release 安装到 Harness Profile：
+
+```sh
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
+```
+
+安装只需要这一条命令。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
+
+```sh
+dsh --profile web --dump-config
+dsh --profile web
+```
+
+完成后像平常一样提问即可，不需要在 Prompt 里手动写 `mcp_search` 或 `mcp_call`。
 
 可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并生成可分享的对比卡片。如果希望把它变成可重复的 CI 约束，可以用 [Schema 预算 Action](#在-ci-里阻止-schema-失控增长)，在工具数量或 Schema 字节超过上限时让 Workflow 失败。
 
@@ -49,16 +70,6 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 | **危险工具应该默认不可见** | 远端工具只有匹配 `allowTools` 才会出现；`denyTools` 在搜索和调用中永远优先。 |
 
 在 DeepSeek 实测中，MCP Lens 和官方直接客户端都完成了 **3/3 项任务**。Lens 会多一次搜索，并在这组样本中产生更多输出 Token，因此它针对的是大型、多 Server、长尾工具库，而不是每轮都会用到的几个固定工具。完整数据见[中文实测报告](docs/LIVE_DEEPSEEK_PILOT.zh-CN.md)。
-
-## 30 秒安装
-
-前置要求：DeepSeek Harness `0.1.0-rc.6`、Node.js `^22.19.0` 或 `>=24.0.0`，并且 `pnpm` 已在 `PATH` 中。`dsh plugin` 会把安装交给 pnpm 执行。
-
-把预编译 Release 安装到 Harness Profile：
-
-```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
-```
 
 这个 tarball 已完成构建，不需要依赖构建权限。下面使用的 MCP 文档 Server 不需要额外 API Key；Harness 仍然需要你已经配置好的模型 Provider。
 

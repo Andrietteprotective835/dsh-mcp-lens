@@ -7,16 +7,37 @@ English | [简体中文](README.zh-CN.md)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-developer%20preview-5B5BD6)](https://github.com/deepseek-ai/deepseek-harness)
 
-**Cut the context and API cost of large MCP catalogs.**
+**Shrink large MCP catalogs to a two-tool model surface.**
 
-MCP Lens lets DeepSeek Harness search and call 1,000 remote tools through two stable model-facing interfaces. Instead of sending every tool schema on every turn, it reveals exact schemas for a small ranked set only when a tool is needed.
+MCP Lens lets DeepSeek Harness search and call 1,000 remote tools through two stable model-facing interfaces. Instead of sending every tool schema on every turn, it reveals exact schemas only for a small ranked set when a tool is actually needed.
 
-At a glance:
+Why users install it:
 
-- Spend less standing context on large MCP catalogs: the live three-task pilot reduced `request/header.tools` JSON from `674,249 B` to `27,401 B`.
-- Lower input-heavy API spend in the tested setup: the same pilot's estimated V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
-- Keep task quality grounded in evidence: both arms completed `3/3` tested tasks, rather than trading reach for a synthetic win.
-- Narrow tool-choice drift and risk: the model sees exact schemas only for ranked matches, while `allowTools` and `denyTools` gate the final `server/tool`.
+- Spend less on input-heavy turns: in the dated three-task pilot, estimated DeepSeek V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
+- Keep more room for the real task: the same pilot reduced `request/header.tools` JSON from `674,249 B` to `27,401 B`.
+- Reduce tool-selection drift: the model sees exact schemas only for ranked matches, and the final `server/tool` is still gated by `allowTools` and `denyTools`.
+- Avoid the usual "compression hurts quality" trap: both arms completed `3/3` tested tasks in the live pilot.
+
+Use MCP Lens if you have dozens to thousands of MCP tools, multiple servers, or long-tail tools that are expensive to advertise on every turn. Skip it if you have only a handful of tools that are used almost every request.
+
+## Install in 30 seconds
+
+Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, and `pnpm` on `PATH`. The `dsh plugin` command delegates installation to pnpm.
+
+Install the prebuilt release into your Harness profile:
+
+```sh
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
+```
+
+Installation takes one command. To make the plugin useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
+
+```sh
+dsh --profile web --dump-config
+dsh --profile web
+```
+
+After that, prompt Harness normally. You do not need to mention `mcp_search` or `mcp_call` in your prompt.
 
 Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes in the browser and generate a shareable comparison card. Prefer a repeatable CI guard? Use the [schema budget Action](#keep-schema-drift-out-of-ci) to fail a workflow when tool count or schema bytes drift above your limit.
 
@@ -48,17 +69,7 @@ For an immutable production reference, pin the reviewed rc.6 commit: `51cd0ec8d9
 | **One server outage should not block the rest** | Other servers keep working, and Lens keeps the previous usable catalog when a refresh fails. |
 | **Risky tools should be hidden by default** | No remote tool appears until it matches `allowTools`; `denyTools` always wins in search and calls. |
 
-In the live pilot, MCP Lens and the official direct client both completed **3/3 tasks**. Lens used one extra search step and more output tokens, so it is designed for large, multi-server, or long-tail catalogs—not a handful of tools used on every turn. See the [full pilot report](docs/LIVE_DEEPSEEK_PILOT.md).
-
-## Install in 30 seconds
-
-Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, and `pnpm` on `PATH`. The `dsh plugin` command delegates installation to pnpm.
-
-Install the prebuilt release into your Harness profile:
-
-```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
-```
+In the live pilot, MCP Lens and the official direct client both completed **3/3 tasks**. Lens used one extra search step and more output tokens, so it is designed for large, multi-server, or long-tail catalogs, not a handful of tools used on every turn. See the [full pilot report](docs/LIVE_DEEPSEEK_PILOT.md).
 
 The tarball is already built, so no dependency build permission is needed. The MCP documentation server used below requires no additional API key; Harness still needs your configured model provider.
 
