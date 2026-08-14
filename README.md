@@ -2,6 +2,10 @@
 
 `dsh-mcp-lens` turns a large MCP estate into **two fixed model-facing tools** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness):
 
+- constant standing tool surface, regardless of whether the profile has 10 or 1,000 remote MCP tools,
+- exact selected `inputSchema` disclosure only when needed,
+- release-candidate tarball that remains independently reproducible instead of README-only.
+
 - `mcp_search` ranks capabilities and reveals only the selected tools' exact input schemas.
 - `mcp_call` invokes one exact `server/tool` capability.
 - Connections are lazy; catalogs are last-good, TTL-bound, versioned, and atomically cached.
@@ -66,6 +70,12 @@ A GitHub source install needs the package's `prepare` build to be explicitly all
 
 ```sh
 dsh plugin --profile web add dsh-mcp-lens@next
+```
+
+Once the public repository exists, you can also pin a reviewed GitHub commit directly:
+
+```sh
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#<commit-sha>
 ```
 
 Current DeepSeek Harness profiles manage third-party plugins through `dsh plugin`, which forwards package specs to `pnpm`. In practice this means a plugin can be installed from:
@@ -155,6 +165,16 @@ npm pack --dry-run
 ```
 
 The implementation intentionally has no UI, OAuth stack, config migration framework, vector database, or model dependency. Its model-facing surface stays at two tools; optional product layers belong in separate plugins.
+
+## Security posture
+
+- This repository intentionally excludes `.env*`, `.npmrc`, runtime catalog files, local DSH state, logs, and release tarballs from Git tracking.
+- Public release verification should always run `npm run verify`, `npm audit --omit=dev`, `npm pack --dry-run`, and a fresh `dsh plugin add` install.
+- If you find a vulnerability, follow [`SECURITY.md`](SECURITY.md) instead of opening a public zero-day issue.
+
+## Launch-ready one-liner
+
+> MCP Lens gives DeepSeek Harness a constant two-tool MCP surface: search first, reveal exact schema second, call third.
 
 ## Release surfaces
 

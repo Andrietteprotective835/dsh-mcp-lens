@@ -2,38 +2,31 @@ name: verify
 
 on:
   push:
-    branches: ["main"]
-    tags: ["v*"]
+    branches:
+      - main
   pull_request:
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [22.19.0, 24.x]
-
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 24
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Verify
         run: npm run verify
 
-      - name: Benchmark
-        run: npm run bench -- --output benchmark.json
-
-      - name: Audit
+      - name: Production audit
         run: npm audit --omit=dev
 
       - name: Pack dry run

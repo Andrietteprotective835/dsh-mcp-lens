@@ -1,45 +1,34 @@
 # Security Policy
 
-## Supported surface
+## Scope
 
-This repository currently supports the latest published `0.1.x` release line and the current `main` branch.
+This repository contains a DeepSeek Harness plugin that can launch trusted stdio MCP servers and connect to trusted Streamable HTTP MCP servers. It is not a sandbox.
 
-## Security posture
+Security reports are especially relevant for:
 
-`dsh-mcp-lens` reduces standing MCP schema exposure, but it is **not** a sandbox.
-
-- stdio MCP servers still run as local host processes
-- HTTP MCP servers still receive the headers you configure
-- selected remote schemas still enter model context
-- operator mistakes in `allowTools` can still expose the wrong capability
-
-Treat every configured MCP endpoint as trusted infrastructure.
-
-## What this project tries to prevent
-
-- persisting configured secrets into the derived on-disk catalog
-- unbounded `tools/list` growth from one server
-- oversized Streamable HTTP responses
-- accidental capability exposure from "install and forget" defaults
-- stale catalog reuse across auth scopes without an explicit `cacheNamespace`
-
-## What this project does not try to prevent
-
-- malicious behavior by a trusted MCP server
-- data exfiltration by an allowed remote tool
-- model misuse of a capability that the operator explicitly allowed
-- provider-side prompt injection contained inside remote tool descriptions or schemas
+- credential disclosure or persistence,
+- policy bypass around `allowTools` / `denyTools`,
+- unintended model-visible disclosure of `_meta`, resources, or signed URLs,
+- command injection or shell-seam issues in stdio transport,
+- SSRF or unsafe network behavior in HTTP transport,
+- cache poisoning, stale cross-tenant reuse, or unsafe persistence.
 
 ## Reporting
 
-Please do not open a public issue for a suspected secret leak or exploit chain.
+Please do **not** open a public issue for an unpatched vulnerability.
 
-Open a private GitHub security advisory if available for the repository. If private advisory flow is not available, contact the maintainer through a non-public channel first and include:
+Instead, send a private report with:
 
-- affected version
-- DSH version
-- Node version
-- reproduction steps
-- whether a real credential was involved
+1. affected version or commit SHA,
+2. reproduction steps,
+3. expected vs actual behavior,
+4. impact assessment,
+5. any proof-of-concept artifacts that can be shared safely.
 
-When sharing logs, remove tokens, cookies, device codes, `~/.dsh/.credentials.yaml`, and any local `.env` values.
+If a private security channel is not yet configured on the public repository, open a minimal issue asking for a private contact path without disclosing exploit details.
+
+## Response target
+
+- Initial triage target: within 3 business days
+- Reproduction / impact confirmation target: within 7 business days
+- Public disclosure only after a fix or explicit maintainer coordination

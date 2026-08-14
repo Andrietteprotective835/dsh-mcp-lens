@@ -37,6 +37,14 @@
   ],
   "author": "dsh-mcp-lens contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/labmimors/dsh-mcp-lens.git"
+  },
+  "homepage": "https://github.com/labmimors/dsh-mcp-lens#readme",
+  "bugs": {
+    "url": "https://github.com/labmimors/dsh-mcp-lens/issues"
+  },
   "publishConfig": {
     "access": "public",
     "tag": "next"

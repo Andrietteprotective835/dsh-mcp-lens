@@ -7,4 +7,8 @@ coverage/
 .npmrc
 *.log
 benchmark.json
+.dsh/
+catalog.json
+catalog-*.json
+benchmark-*.json
 .DS_Store
