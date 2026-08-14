@@ -27,7 +27,7 @@ Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, 
 Install the prebuilt release into your Harness profile:
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.7/dsh-mcp-lens-0.1.0-rc.7.tgz
 ```
 
 Installation takes one command. To make the plugin useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
@@ -44,7 +44,7 @@ Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens
 Need the same measurement in CI? This repository also ships a dependency-free GitHub Action that audits a checked-in tool payload and reports the model-facing tool count, canonical schema bytes, and byte reduction versus the fixed two-tool Lens surface.
 
 ```yaml
-- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.6
+- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.7
   with:
     tools-file: fixtures/request-header-tools.json
 ```
@@ -77,7 +77,7 @@ The tarball is already built, so no dependency build permission is needed. The M
 <summary>Install reviewed source instead</summary>
 
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.6
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.7
 ```
 
 Git installs fetch source and run `prepare`. With pnpm 10+, add this exact package key to `$DSH_HOME/profiles/web/pnpm-workspace.yaml` (default `~/.dsh/profiles/web/pnpm-workspace.yaml`), then rerun the command:
@@ -292,7 +292,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
 - Contributions: read [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.
-- Release: [`v0.1.0-rc.6`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.6).
+- Release candidate (not published yet): [`v0.1.0-rc.7`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.7).
 
 DeepSeek Harness currently discovers community plugins through public GitHub repositories with the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic and installs them from GitHub, tarballs, or npm packages. See the official [plugin publishing guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.md).
 

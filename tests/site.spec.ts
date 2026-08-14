@@ -49,6 +49,8 @@ function localMarkdownTargets(markdown: string): string[] {
 
 const frozenPilotDate = '2026-08-14'
 const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334222997/ee14cb30-45a1-42fb-bb6b-e606ec8b3078'
+const lensReleaseCandidate = '0.1.0-rc.7'
+const harnessPilotVersion = '0.1.0-rc.6'
 
 describe('catalog calculator publishing contract', () => {
   it('ships every referenced static asset and required DOM target', async () => {
@@ -269,6 +271,9 @@ describe('catalog calculator publishing contract', () => {
       expect(html).toContain('794')
       expect(html).not.toContain('2026-08-15')
       expect(html).not.toMatch(/<script(?!\s+type="application\/ld\+json")/)
+      expect(html).toContain(`DeepSeek Harness ${harnessPilotVersion}`)
+      expect(html).toContain(`/releases/download/v${lensReleaseCandidate}/dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
+      expect(html).not.toContain('/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz')
     }
 
     expect(english).toContain('pricing retrieved on August 14, 2026')
@@ -300,6 +305,40 @@ describe('catalog calculator publishing contract', () => {
     expect(styles).toContain('.article-shell')
     expect(styles).toContain('.article-proof')
     expect(styles).toContain('width: min(1040px, calc(100% - 20px));')
+  })
+
+  it('identifies the Lens rc.7 candidate without rewriting rc.6 Harness dependencies or pilot history', async () => {
+    const [packageJson, shrinkwrap, englishReadme, chineseReadme, englishPilot, chinesePilot] = await Promise.all([
+      readFile(join(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse),
+      readFile(join(repositoryRoot, 'npm-shrinkwrap.json'), 'utf8').then(JSON.parse),
+      readFile(join(repositoryRoot, 'README.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'README.zh-CN.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'docs', 'LIVE_DEEPSEEK_PILOT.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'docs', 'LIVE_DEEPSEEK_PILOT.zh-CN.md'), 'utf8'),
+    ])
+
+    expect(packageJson.version).toBe(lensReleaseCandidate)
+    expect(shrinkwrap.version).toBe(lensReleaseCandidate)
+    expect(shrinkwrap.packages[''].version).toBe(lensReleaseCandidate)
+
+    for (const dependencyGroup of [packageJson.peerDependencies, packageJson.devDependencies]) {
+      for (const [name, range] of Object.entries(dependencyGroup)) {
+        if (name.startsWith('@deepseek-ai/dsh-')) expect(range).toBe(`^${harnessPilotVersion}`)
+      }
+    }
+
+    for (const readme of [englishReadme, chineseReadme]) {
+      expect(readme).toContain(`/releases/download/v${lensReleaseCandidate}/dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
+      expect(readme).toContain(`labmimors/dsh-mcp-lens@v${lensReleaseCandidate}`)
+      expect(readme).toContain(`github:labmimors/dsh-mcp-lens#v${lensReleaseCandidate}`)
+      expect(readme).toContain(`/releases/tag/v${lensReleaseCandidate}`)
+      expect(readme).not.toContain('/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz')
+      expect(readme).not.toContain('labmimors/dsh-mcp-lens@v0.1.0-rc.6')
+      expect(readme).not.toContain('github:labmimors/dsh-mcp-lens#v0.1.0-rc.6')
+    }
+
+    expect(englishPilot).toContain(`DeepSeek Harness: \`${harnessPilotVersion}\``)
+    expect(chinesePilot).toContain(`DeepSeek Harness：\`${harnessPilotVersion}\``)
   })
 
   it('pins every Pages action to the reviewed immutable revision', async () => {

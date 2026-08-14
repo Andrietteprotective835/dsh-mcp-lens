@@ -27,7 +27,7 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 把预编译 Release 安装到 Harness Profile：
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.7/dsh-mcp-lens-0.1.0-rc.7.tgz
 ```
 
 安装只需要这一条命令。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
@@ -44,7 +44,7 @@ dsh --profile web
 如果你想把同样的测量放进 CI，这个仓库也附带了一个零依赖 GitHub Action：读取仓库内的工具 JSON，输出模型可见工具数、标准 Schema 字节数，以及相对 Lens 固定两工具面的字节降幅。
 
 ```yaml
-- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.6
+- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.7
   with:
     tools-file: fixtures/request-header-tools.json
 ```
@@ -77,7 +77,7 @@ dsh --profile web
 <summary>改为安装已审核的源码</summary>
 
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.6
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.7
 ```
 
 Git 安装会下载源码并运行 `prepare`。使用 pnpm 10+ 时，请在 `$DSH_HOME/profiles/web/pnpm-workspace.yaml`（默认 `~/.dsh/profiles/web/pnpm-workspace.yaml`）中加入准确包名，然后重新安装：
@@ -292,7 +292,7 @@ MCP Lens 不是沙箱：stdio Server 仍会在宿主机执行，HTTP Server 仍�
 - 安全问题：阅读 [`SECURITY.md`](SECURITY.md)，不要在公开 Issue 中披露未修复漏洞。
 - 参与贡献：阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 - 搜索质量：[提交脱敏后的搜索 Miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)，帮助把真实失败转成回归 Fixture。
-- 当前 Release：[`v0.1.0-rc.6`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.6)。
+- Release 候选版（尚未发布）：[`v0.1.0-rc.7`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.7)。
 
 DeepSeek Harness 当前通过带有 [`dsh-plugin`](https://github.com/topics/dsh-plugin) Topic 的公开 GitHub 仓库发现社区插件，并支持从 GitHub、tarball 或 npm 包安装。详见官方[插件发布教程](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md)。
 
