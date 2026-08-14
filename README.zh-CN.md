@@ -11,6 +11,13 @@
 
 MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个远端工具。它不会在每轮请求中塞入全部工具 Schema，而是只在需要工具时，为少量排序候选揭示准确 Schema。
 
+先看结果：
+
+- 大型 MCP 工具库常驻上下文更小：三项任务实测里，`request/header.tools` JSON 从 `674,249 B` 降到 `27,401 B`。
+- 输入成本压力更低：同一组样本里，V4 Flash 预估费用从 `$0.0307204` 降到 `$0.0034707`。
+- 完成率没有靠“缩能力”换出来：两侧都完成了 `3/3` 个已测任务。
+- 工具偏移和风险更可控：模型只会看到排序候选的准确 Schema，而最终 `server/tool` 仍受 `allowTools` / `denyTools` 限制。
+
 可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并生成可分享的对比卡片。
 
 <p align="center">
@@ -164,7 +171,7 @@ Lens 用首次使用时的一次搜索，换取接近恒定的常驻 MCP Schema 
 | 缓存命中输入 Token | 934,912 | 74,496 | 减少 92.032% |
 | 预估 API 费用 | $0.0307204 | $0.0034707 | 降低 88.702% |
 
-费用根据 Provider 返回的 Usage 和 2026 年 8 月 15 日有效的 [V4 Flash 官方价格](https://api-docs.deepseek.com/quick_start/pricing/)估算。三项任务、实际调用、计算公式和取舍都记录在 [`docs/LIVE_DEEPSEEK_PILOT.zh-CN.md`](docs/LIVE_DEEPSEEK_PILOT.zh-CN.md)。
+费用根据 Provider 返回的 Usage，并按 2026 年 8 月 14 日抓取的 [DeepSeek V4 Flash 官方价格](https://api-docs.deepseek.com/quick_start/pricing/)估算。该价格页同时注明会在 2026 年 8 月 16 日 16:00 UTC 切换到峰谷计费，所以后续比较应基于记录的 Usage 重新计算。三项任务、实际调用、计算公式和取舍都记录在 [`docs/LIVE_DEEPSEEK_PILOT.zh-CN.md`](docs/LIVE_DEEPSEEK_PILOT.zh-CN.md)。
 
 ### 无需 API Key 的组件 Benchmark
 

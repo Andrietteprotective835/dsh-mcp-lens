@@ -11,6 +11,13 @@ English | [简体中文](README.zh-CN.md)
 
 MCP Lens lets DeepSeek Harness search and call 1,000 remote tools through two stable model-facing interfaces. Instead of sending every tool schema on every turn, it reveals exact schemas for a small ranked set only when a tool is needed.
 
+At a glance:
+
+- Spend less standing context on large MCP catalogs: the live three-task pilot reduced `request/header.tools` JSON from `674,249 B` to `27,401 B`.
+- Lower input-heavy API spend in the tested setup: the same pilot's estimated V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
+- Keep task quality grounded in evidence: both arms completed `3/3` tested tasks, rather than trading reach for a synthetic win.
+- Narrow tool-choice drift and risk: the model sees exact schemas only for ranked matches, while `allowTools` and `denyTools` gate the final `server/tool`.
+
 Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes in the browser and generate a shareable comparison card.
 
 <p align="center">
@@ -164,7 +171,7 @@ Same DeepSeek Harness `0.1.0-rc.6`, same 1,000-tool stdio server, and the same t
 | Cache-read input tokens | 934,912 | 74,496 | 92.032% fewer |
 | Estimated API cost | $0.0307204 | $0.0034707 | 88.702% lower |
 
-The cost estimate uses provider-reported usage and [official V4 Flash pricing](https://api-docs.deepseek.com/quick_start/pricing/) current on August 15, 2026. The three-task setup, observed calls, formula, and tradeoffs are recorded in [`docs/LIVE_DEEPSEEK_PILOT.md`](docs/LIVE_DEEPSEEK_PILOT.md).
+The cost estimate multiplies provider-reported usage by the [official DeepSeek V4 Flash pricing](https://api-docs.deepseek.com/quick_start/pricing/) retrieved on August 14, 2026. That pricing page also announces a new peak/off-peak schedule effective at 16:00 UTC on August 16, 2026, so later comparisons should recompute from the recorded usage. The three-task setup, observed calls, formula, and tradeoffs are recorded in [`docs/LIVE_DEEPSEEK_PILOT.md`](docs/LIVE_DEEPSEEK_PILOT.md).
 
 ### Keyless component benchmark
 

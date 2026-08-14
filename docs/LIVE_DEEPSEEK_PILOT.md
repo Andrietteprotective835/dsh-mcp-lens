@@ -47,7 +47,7 @@ Aggregate provider-reported usage:
 | Official direct client | 199,751 | 934,912 | 491 | 253 |
 | MCP Lens | 21,713 | 74,496 | 794 | 307 |
 
-The estimate uses the official DeepSeek V4 Flash prices current on August 15, 2026:
+The estimate uses the official DeepSeek V4 Flash prices retrieved on August 14, 2026:
 
 - cache-miss input: $0.14 per million tokens
 - cache-hit input: $0.0028 per million tokens
@@ -62,7 +62,7 @@ estimated cost =
   + output / 1,000,000 × $0.28
 ```
 
-Pricing source: [DeepSeek Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/). Provider prices can change, so recompute from the recorded usage when comparing later.
+Pricing source: [DeepSeek Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/). That page also announces a peak/off-peak pricing change effective at 16:00 UTC on August 16, 2026. Provider prices can change, so recompute from the recorded usage when comparing later.
 
 ## What this does and does not show
 

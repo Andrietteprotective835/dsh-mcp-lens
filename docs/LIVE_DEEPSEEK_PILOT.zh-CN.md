@@ -47,7 +47,7 @@ Provider 返回的聚合 Usage：
 | 官方直接客户端 | 199,751 | 934,912 | 491 | 253 |
 | MCP Lens | 21,713 | 74,496 | 794 | 307 |
 
-费用估算采用 2026 年 8 月 15 日有效的 DeepSeek V4 Flash 官方价格：
+费用估算采用 2026 年 8 月 14 日抓取的 DeepSeek V4 Flash 官方价格：
 
 - 缓存未命中输入：每百万 Token $0.14
 - 缓存命中输入：每百万 Token $0.0028
@@ -62,7 +62,7 @@ Provider 返回的聚合 Usage：
   + 输出 / 1,000,000 × $0.28
 ```
 
-价格来源：[DeepSeek Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/)。Provider 价格可能变化，之后比较时应使用记录的 Usage 和最新价格重新计算。
+价格来源：[DeepSeek Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/)。该页面同时注明会在 2026 年 8 月 16 日 16:00 UTC 切换到峰谷计费。Provider 价格可能变化，之后比较时应使用记录的 Usage 和最新价格重新计算。
 
 ## 这组数据能说明什么
 
