@@ -1,0 +1,10 @@
+lib/
+node_modules/
+coverage/
+*.tgz
+.env
+.env.*
+.npmrc
+*.log
+benchmark.json
+.DS_Store

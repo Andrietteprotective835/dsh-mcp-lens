@@ -1,0 +1,25 @@
+# MCP Lens contributes exactly two model-facing tools. Servers ship empty:
+# every configured MCP server is trusted executable or network capability and
+# must be selected by the profile owner.
+- insert:
+    - id: mcp-lens
+      name: dsh-mcp-lens
+      config:
+        servers: []
+        cachePath: !!js dshHomePath('mcp-lens/catalog.json')
+        catalogTtlMs: 86400000
+        idleDisconnectMs: 300000
+        connectTimeoutMs: 30000
+        callTimeoutMs: 60000
+        discoveryTimeoutMs: 30000
+        maxDiscoveryPages: 1000
+        maxToolsPerServer: 10000
+        maxBytesPerTool: 1048576
+        maxTotalCatalogBytes: 67108864
+        maxHttpResponseBytes: 16777216
+        maxCursorBytes: 4096
+        searchLimitDefault: 5
+        searchLimitMax: 10
+        # Fail closed: explicitly opt capabilities in by exact server/tool glob.
+        allowTools: []
+        denyTools: []
