@@ -39,7 +39,7 @@ dsh --profile web
 
 完成后像平常一样提问即可，不需要在 Prompt 里手动写 `mcp_search` 或 `mcp_call`。
 
-可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并生成可分享的对比卡片。如果希望把它变成可重复的 CI 约束，可以用 [Schema 预算 Action](#在-ci-里阻止-schema-失控增长)，在工具数量或 Schema 字节超过上限时让 Workflow 失败。
+可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并可复制不含 Schema 的分享链接或 Markdown。分享结果固定标注为**用户自报的本地测量（self-reported local measurement）**，URL 只编码有边界的数字字段，不包含工具名、描述或 Schema。数字校验只能发现意外修改，不是签名，也不能证明测量真实发生过。如果希望把它变成可重复的 CI 约束，可以用 [Schema 预算 Action](#在-ci-里阻止-schema-失控增长)，在工具数量或 Schema 字节超过上限时让 Workflow 失败。
 
 如果你想把同样的测量放进 CI，这个仓库也附带了一个零依赖 GitHub Action：读取仓库内的工具 JSON，输出模型可见工具数、标准 Schema 字节数，以及相对 Lens 固定两工具面的字节降幅。
 
@@ -218,9 +218,9 @@ npm run bench -- --output benchmark.json
 
 ## 在 CI 里阻止 Schema 失控增长
 
-零依赖的 **MCP Lens Schema Audit** GitHub Action 会在 Runner 内测量导出的模型可见工具载荷。它不发网络请求，只写数字 Output，也不会把工具名称、描述或 Schema 复制到 Step Summary。配置预算后，意外扩大的工具面会直接让检查失败。
+零依赖的 **MCP Lens Schema Audit** GitHub Action 会在 Runner 内测量导出的模型可见工具载荷。它不发网络请求，除数字指标外只输出不含 Schema 的 `share-url` / `share-markdown`，也不会把工具名称、描述或 Schema 复制到 Step Summary。配置预算后，意外扩大的工具面会直接让检查失败。
 
-支持的 JSON 形式包括工具数组、`{ "tools": [...] }`、`{ "schemas": [...] }`，以及记录的 `{ "request": { "header": { "tools": [...] } } }`。
+支持的 JSON 形式包括工具数组、`{ "tools": [...] }`、`{ "schemas": [...] }`、`{ "header": { "tools": [...] } }`，以及记录的 `{ "request": { "header": { "tools": [...] } } }`。
 
 ```yaml
 name: MCP schema budget

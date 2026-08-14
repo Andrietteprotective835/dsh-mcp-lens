@@ -5,6 +5,7 @@ on:
     paths:
       - action.yml
       - action/**
+      - site/share-metrics.js
       - .github/workflows/action-smoke.yml
   push:
     branches:
@@ -12,6 +13,7 @@ on:
     paths:
       - action.yml
       - action/**
+      - site/share-metrics.js
       - .github/workflows/action-smoke.yml
 
 permissions:
@@ -38,9 +40,19 @@ jobs:
           TOOL_COUNT: ${{ steps.audit.outputs.tool-count }}
           LENS_TOOL_COUNT: ${{ steps.audit.outputs.lens-tool-count }}
           SCHEMA_BYTES: ${{ steps.audit.outputs.schema-bytes }}
+          SHARE_URL: ${{ steps.audit.outputs.share-url }}
+          SHARE_MARKDOWN: ${{ steps.audit.outputs.share-markdown }}
         run: |
           test "$TOOL_COUNT" = "2"
           test "$LENS_TOOL_COUNT" = "2"
           case "$SCHEMA_BYTES" in
             ''|*[!0-9]*) exit 1 ;;
+          esac
+          case "$SHARE_URL" in
+            https://labmimors.github.io/dsh-mcp-lens/#v=1\&tools=2\&bytes=*\&check=*) ;;
+            *) exit 1 ;;
+          esac
+          case "$SHARE_MARKDOWN" in
+            *"Self-reported local measurement:"*"$SHARE_URL"*) ;;
+            *) exit 1 ;;
           esac

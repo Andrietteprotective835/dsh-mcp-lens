@@ -1,11 +1,25 @@
 import { appendFile, readFile, realpath, stat } from "node:fs/promises"
 import { isAbsolute, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  LENS_SURFACE,
+  buildShareHash,
+  buildShareMarkdown,
+  buildShareUrl,
+  parseShareHash,
+  reductionPercent,
+  validateShareMetrics,
+} from "../site/share-metrics.js"
 
-export const LENS_SURFACE = Object.freeze({
-  tools: 2,
-  bytes: 1114,
-})
+export {
+  LENS_SURFACE,
+  buildShareHash,
+  buildShareMarkdown,
+  buildShareUrl,
+  parseShareHash,
+  reductionPercent,
+  validateShareMetrics,
+}
 
 export const MAX_TOOLS_FILE_BYTES = 64 * 1024 * 1024
 
@@ -15,6 +29,11 @@ export function extractTools(value) {
     if (Array.isArray(value.tools)) return value.tools
     if (Array.isArray(value.schemas)) return value.schemas
     if (
+      value.header
+      && typeof value.header === "object"
+      && Array.isArray(value.header.tools)
+    ) return value.header.tools
+    if (
       value.request
       && typeof value.request === "object"
       && value.request.header
@@ -23,7 +42,7 @@ export function extractTools(value) {
     ) return value.request.header.tools
   }
 
-  throw new Error("Expected a JSON array, a tools/schemas array, or a request.header.tools array.")
+  throw new Error("Expected a JSON array, a tools/schemas array, a header.tools array, or a request.header.tools array.")
 }
 
 export function measurePayload(value) {
@@ -35,11 +54,6 @@ export function measurePayload(value) {
     bytes,
     reductionPercent: reductionPercent(bytes, LENS_SURFACE.bytes),
   }
-}
-
-export function reductionPercent(currentBytes, lensBytes) {
-  if (currentBytes <= 0 || currentBytes <= lensBytes) return 0
-  return ((currentBytes - lensBytes) / currentBytes) * 100
 }
 
 export function parsePayload(raw) {
@@ -116,12 +130,16 @@ export async function resolveToolsFile(inputPath, workspacePath) {
 }
 
 export function buildOutputs(measurement) {
+  const shareMetrics = validateShareMetrics(measurement)
+  const shareReductionPercent = reductionPercent(shareMetrics.bytes, LENS_SURFACE.bytes)
   return Object.freeze({
-    "tool-count": String(measurement.toolCount),
-    "schema-bytes": String(measurement.bytes),
+    "tool-count": String(shareMetrics.toolCount),
+    "schema-bytes": String(shareMetrics.bytes),
     "lens-tool-count": String(LENS_SURFACE.tools),
     "lens-schema-bytes": String(LENS_SURFACE.bytes),
-    "schema-byte-reduction-percent": measurement.reductionPercent.toFixed(3),
+    "schema-byte-reduction-percent": shareReductionPercent.toFixed(3),
+    "share-url": buildShareUrl(shareMetrics),
+    "share-markdown": buildShareMarkdown(shareMetrics),
   })
 }
 
@@ -137,18 +155,22 @@ function comparison(current, lens, unit) {
 }
 
 export function buildStepSummary(measurement, budgets = {}) {
-  const violations = budgetViolations(measurement, budgets)
+  const shareMetrics = validateShareMetrics(measurement)
+  const shareReductionPercent = reductionPercent(shareMetrics.bytes, LENS_SURFACE.bytes)
+  const violations = budgetViolations(shareMetrics, budgets)
+  const shareUrl = buildShareUrl(shareMetrics)
   const lines = [
     "## MCP Lens schema surface",
     "",
     "| Surface | Model-facing tools | Canonical `JSON.stringify(tools)` UTF-8 bytes |",
     "| --- | ---: | ---: |",
-    `| Current input | ${formatInteger(measurement.toolCount)} | ${formatInteger(measurement.bytes)} B |`,
+    `| Current input | ${formatInteger(shareMetrics.toolCount)} | ${formatInteger(shareMetrics.bytes)} B |`,
     `| Fixed MCP Lens benchmark | ${formatInteger(LENS_SURFACE.tools)} | ${formatInteger(LENS_SURFACE.bytes)} B |`,
     "",
-    `- Tool-count comparison: **${comparison(measurement.toolCount, LENS_SURFACE.tools, "tools")}**`,
-    `- Schema-byte comparison: **${comparison(measurement.bytes, LENS_SURFACE.bytes, "bytes")}**`,
-    `- Schema-byte reduction versus this payload: **${measurement.reductionPercent.toFixed(3)}%**`,
+    `- Tool-count comparison: **${comparison(shareMetrics.toolCount, LENS_SURFACE.tools, "tools")}**`,
+    `- Schema-byte comparison: **${comparison(shareMetrics.bytes, LENS_SURFACE.bytes, "bytes")}**`,
+    `- Schema-byte reduction versus this payload: **${shareReductionPercent.toFixed(3)}%**`,
+    `- Shareable result: [open this self-reported local measurement](${shareUrl})`,
   ]
 
   if (budgets.maxTools !== undefined || budgets.maxSchemaBytes !== undefined) {
@@ -162,7 +184,7 @@ export function buildStepSummary(measurement, budgets = {}) {
 
   lines.push(
     "",
-    "> Schema bytes only; this does not measure tokens, billing, latency, or task quality.",
+    "> Self-reported local measurement. Schema bytes only; this does not measure tokens, billing, latency, or task quality.",
     "",
   )
   return lines.join("\n")

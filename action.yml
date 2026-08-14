@@ -8,7 +8,7 @@ branding:
 
 inputs:
   tools-file:
-    description: Workspace-relative path to a JSON tool array, tools/schemas object, or recorded request.header.tools payload.
+    description: Workspace-relative path to a JSON tool array, tools/schemas object, or recorded header.tools/request.header.tools payload.
     required: true
   max-tools:
     description: Optional positive tool-count budget. The action fails when the payload exceeds it.
@@ -28,6 +28,10 @@ outputs:
     description: Fixed MCP Lens benchmark surface schema bytes (1114).
   schema-byte-reduction-percent:
     description: Schema-byte reduction versus the supplied payload, clamped to zero and rounded to three decimals.
+  share-url:
+    description: Schema-free calculator URL for this self-reported local measurement.
+  share-markdown:
+    description: Schema-free Markdown link labeled as a self-reported local measurement.
 
 runs:
   using: node24

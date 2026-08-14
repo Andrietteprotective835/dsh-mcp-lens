@@ -39,7 +39,7 @@ dsh --profile web
 
 After that, prompt Harness normally. You do not need to mention `mcp_search` or `mcp_call` in your prompt.
 
-Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes in the browser and generate a shareable comparison card. Prefer a repeatable CI guard? Use the [schema budget Action](#keep-schema-drift-out-of-ci) to fail a workflow when tool count or schema bytes drift above your limit.
+Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes, then copy a schema-free share link or Markdown result. Shared results are always labeled **self-reported local measurements** and encode only bounded numeric fields—not tool names, descriptions, or schemas. The numeric check catches accidental edits; it is not a signature or proof that a measurement occurred. Prefer a repeatable CI guard? Use the [schema budget Action](#keep-schema-drift-out-of-ci) to fail a workflow when tool count or schema bytes drift above your limit.
 
 Need the same measurement in CI? This repository also ships a dependency-free GitHub Action that audits a checked-in tool payload and reports the model-facing tool count, canonical schema bytes, and byte reduction versus the fixed two-tool Lens surface.
 
@@ -218,9 +218,9 @@ The exact metric, fixture, dependency versions, source digest, and measurement l
 
 ## Keep schema drift out of CI
 
-The dependency-free **MCP Lens Schema Audit** GitHub Action measures an exported model-facing tool payload inside the runner. It makes no network request, writes only numeric outputs, and never copies tool names, descriptions, or schemas into the Step Summary. Optional budgets turn an unexpected schema expansion into a failing check.
+The dependency-free **MCP Lens Schema Audit** GitHub Action measures an exported model-facing tool payload inside the runner. It makes no network request, writes numeric metrics plus schema-free `share-url` / `share-markdown` outputs, and never copies tool names, descriptions, or schemas into the Step Summary. Optional budgets turn an unexpected schema expansion into a failing check.
 
-Accepted JSON shapes are a tool array, `{ "tools": [...] }`, `{ "schemas": [...] }`, or a recorded `{ "request": { "header": { "tools": [...] } } }` payload.
+Accepted JSON shapes are a tool array, `{ "tools": [...] }`, `{ "schemas": [...] }`, `{ "header": { "tools": [...] } }`, or a recorded `{ "request": { "header": { "tools": [...] } } }` payload.
 
 ```yaml
 name: MCP schema budget

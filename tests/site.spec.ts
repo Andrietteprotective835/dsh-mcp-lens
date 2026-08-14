@@ -6,13 +6,13 @@ import { describe, expect, it } from 'vitest'
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const siteRoot = join(repositoryRoot, 'site')
 const appPath = join(siteRoot, 'app.js')
+const sharePath = join(siteRoot, 'share-metrics.js')
 
 interface SiteModule {
   BENCHMARK_SOURCE_FILES: readonly string[]
   LENS_SURFACE: Readonly<{ tools: number, bytes: number }>
   SAMPLE_TOOLS: readonly unknown[]
   measurePayload(value: unknown): {
-    tools: readonly unknown[]
     toolCount: number
     bytes: number
     reductionPercent: number
@@ -21,8 +21,22 @@ interface SiteModule {
   utf8Bytes(value: string): number
 }
 
+interface ShareModule {
+  MAX_SHARE_HASH_LENGTH: number
+  MAX_SHARE_SCHEMA_BYTES: number
+  MAX_SHARE_TOOL_COUNT: number
+  buildShareHash(value: { toolCount: number, bytes: number, [key: string]: unknown }): string
+  buildShareMarkdown(value: { toolCount: number, bytes: number, [key: string]: unknown }): string
+  buildShareUrl(value: { toolCount: number, bytes: number, [key: string]: unknown }): string
+  parseShareHash(hash: string): Readonly<{ toolCount: number, bytes: number }> | null
+}
+
 async function loadSiteModule(): Promise<SiteModule> {
   return await import(pathToFileURL(appPath).href) as SiteModule
+}
+
+async function loadShareModule(): Promise<ShareModule> {
+  return await import(pathToFileURL(sharePath).href) as ShareModule
 }
 
 function localMarkdownTargets(markdown: string): string[] {
@@ -38,7 +52,7 @@ const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334
 
 describe('catalog calculator publishing contract', () => {
   it('ships every referenced static asset and required DOM target', async () => {
-    const assets = ['index.html', 'app.js', 'styles.css', 'favicon.svg']
+    const assets = ['index.html', 'app.js', 'share-metrics.js', 'styles.css', 'favicon.svg']
     await Promise.all(assets.map(asset => access(join(siteRoot, asset))))
 
     const html = await readFile(join(siteRoot, 'index.html'), 'utf8')
@@ -54,7 +68,8 @@ describe('catalog calculator publishing contract', () => {
       'analyze-button',
       'sample-button',
       'clear-button',
-      'copy-summary-button',
+      'copy-share-link-button',
+      'copy-markdown-button',
       'copy-command-button',
       'download-card-button',
       'share-card',
@@ -65,8 +80,9 @@ describe('catalog calculator publishing contract', () => {
     }
 
     expect(html).toMatch(/<script\s+type=["']module["']\s+src=["']\.\/app\.js["']><\/script>/)
-    expect(html).toContain('only the measurement summary and claim boundary')
+    expect(html).toContain('only bounded numeric fields')
     expect(html).not.toContain('includes the exact inputs')
+    expect(html).toMatch(/<textarea[^>]+id=["']schema-input["'][^>]*><\/textarea>/s)
   })
 
   it('publishes stable homepage metadata for search and social crawlers', async () => {
@@ -89,7 +105,10 @@ describe('catalog calculator publishing contract', () => {
   })
 
   it('keeps calculator execution local and avoids HTML injection sinks', async () => {
-    const source = await readFile(appPath, 'utf8')
+    const sources = await Promise.all([
+      readFile(appPath, 'utf8'),
+      readFile(sharePath, 'utf8'),
+    ])
     const forbiddenBehaviors = [
       /\bfetch\s*\(/,
       /\bXMLHttpRequest\b/,
@@ -101,8 +120,10 @@ describe('catalog calculator publishing contract', () => {
       /\.outerHTML\s*=/,
     ]
 
-    for (const behavior of forbiddenBehaviors) {
-      expect(source).not.toMatch(behavior)
+    for (const source of sources) {
+      for (const behavior of forbiddenBehaviors) {
+        expect(source).not.toMatch(behavior)
+      }
     }
   })
 
@@ -116,6 +137,77 @@ describe('catalog calculator publishing contract', () => {
     expect(measurement.reductionPercent).toBeCloseTo(99.62223714283776, 12)
     expect(site.reductionPercent(2_000, 1_000)).toBe(50)
     expect(site.reductionPercent(1_000, 1_114)).toBe(0)
+  })
+
+  it('round-trips only validated aggregate metrics through a schema-free share hash', async () => {
+    const site = await loadSiteModule()
+    const share = await loadShareModule()
+    const privatePayload = [{
+      name: 'PRIVATE_TOOL_NAME_DO_NOT_SHARE',
+      description: 'PRIVATE_DESCRIPTION_DO_NOT_SHARE',
+      inputSchema: { type: 'object', properties: { privateField: { type: 'string' } } },
+    }]
+    const measurement = site.measurePayload(privatePayload)
+    const enrichedMeasurement = { ...measurement, raw: JSON.stringify(privatePayload) }
+
+    const hash = share.buildShareHash(enrichedMeasurement)
+    const url = share.buildShareUrl(enrichedMeasurement)
+    const markdown = share.buildShareMarkdown(enrichedMeasurement)
+
+    expect(share.parseShareHash(hash)).toEqual({
+      toolCount: measurement.toolCount,
+      bytes: measurement.bytes,
+    })
+    expect(hash).toMatch(/^#v=1&tools=\d+&bytes=\d+&check=\d+$/)
+    expect(url).toBe(`https://labmimors.github.io/dsh-mcp-lens/${hash}`)
+    expect(markdown).toContain('Self-reported local measurement:')
+    expect(markdown).toContain(url)
+    for (const output of [hash, url, markdown]) {
+      expect(output).not.toContain('PRIVATE_TOOL_NAME_DO_NOT_SHARE')
+      expect(output).not.toContain('PRIVATE_DESCRIPTION_DO_NOT_SHARE')
+      expect(output).not.toContain('privateField')
+      expect(output).not.toContain('raw=')
+    }
+  })
+
+  it('rejects checksum mismatches, malformed, oversized, and non-canonical share data', async () => {
+    const share = await loadShareModule()
+    const valid = { toolCount: 12, bytes: 4_862 }
+    const hash = share.buildShareHash(valid)
+
+    expect(share.parseShareHash(hash.replace('bytes=4862', 'bytes=4863'))).toBeNull()
+    expect(share.parseShareHash(hash.replace('v=1', 'v=2'))).toBeNull()
+    expect(share.parseShareHash(`${hash}&unknown=1`)).toBeNull()
+    expect(share.parseShareHash(`${hash}&raw=PRIVATE_SCHEMA`)).toBeNull()
+    expect(share.parseShareHash('#v=1&tools=NaN&bytes=4862&check=0')).toBeNull()
+    expect(share.parseShareHash('#v=1&tools=-1&bytes=4862&check=0')).toBeNull()
+    expect(share.parseShareHash('#v=01&tools=12&bytes=4862&check=0')).toBeNull()
+    expect(share.parseShareHash(`#${'1'.repeat(share.MAX_SHARE_HASH_LENGTH)}`)).toBeNull()
+
+    for (const invalid of [
+      { toolCount: Number.NaN, bytes: 4_862 },
+      { toolCount: -1, bytes: 4_862 },
+      { toolCount: share.MAX_SHARE_TOOL_COUNT + 1, bytes: 4_862 },
+      { toolCount: 12, bytes: Number.NaN },
+      { toolCount: 12, bytes: -1 },
+      { toolCount: 12, bytes: share.MAX_SHARE_SCHEMA_BYTES + 1 },
+      { toolCount: 12, bytes: 12 },
+    ]) {
+      expect(() => share.buildShareHash(invalid)).toThrow()
+    }
+  })
+
+  it('hydrates a valid self-reported hash without repopulating the schema textarea', async () => {
+    const [appSource, html] = await Promise.all([
+      readFile(appPath, 'utf8'),
+      readFile(join(siteRoot, 'index.html'), 'utf8'),
+    ])
+
+    expect(appSource).toContain('parseShareHash(window.location.hash)')
+    expect(appSource).toContain('elements.input.value = ""')
+    expect(appSource).toContain('Loaded a self-reported local measurement from the URL')
+    expect(appSource).not.toMatch(/elements\.input\.value\s*=\s*sharedMeasurement/)
+    expect(html).toContain('reconstruct the self-reported result with an empty textarea')
   })
 
   it('keeps every local README link and card benchmark source resolvable', async () => {
