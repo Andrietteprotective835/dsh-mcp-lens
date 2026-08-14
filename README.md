@@ -30,14 +30,14 @@ Install the prebuilt release into your Harness profile:
 dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
 ```
 
-Then allow only the remote tools you want in `$DSH_HOME/profiles/web/cordis.patch.yml`, run:
+Installation takes one command. To make the plugin useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
 
 ```sh
 dsh --profile web --dump-config
 dsh --profile web
 ```
 
-and prompt Harness normally. You do not need to mention `mcp_search` or `mcp_call` in your prompt.
+After that, prompt Harness normally. You do not need to mention `mcp_search` or `mcp_call` in your prompt.
 
 Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes in the browser and generate a shareable comparison card. Prefer a repeatable CI guard? Use the [schema budget Action](#keep-schema-drift-out-of-ci) to fail a workflow when tool count or schema bytes drift above your limit.
 

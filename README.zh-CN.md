@@ -30,14 +30,14 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
 ```
 
-然后在 `$DSH_HOME/profiles/web/cordis.patch.yml` 里只放行你需要的远端工具，再执行：
+安装只需要这一条命令。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
 
 ```sh
 dsh --profile web --dump-config
 dsh --profile web
 ```
 
-之后像平常一样提问即可，不需要在 Prompt 里手动写 `mcp_search` 或 `mcp_call`。
+完成后像平常一样提问即可，不需要在 Prompt 里手动写 `mcp_search` 或 `mcp_call`。
 
 可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并生成可分享的对比卡片。如果希望把它变成可重复的 CI 约束，可以用 [Schema 预算 Action](#在-ci-里阻止-schema-失控增长)，在工具数量或 Schema 字节超过上限时让 Workflow 失败。
 
