@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-lens",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0-rc.2",
   "description": "Progressive-disclosure MCP gateway for DeepSeek Harness: two fixed tools, precise schema search, lazy connections, and failure isolation",
   "keywords": [
     "deepseek",
@@ -8,8 +8,11 @@
     "dsh",
     "dsh-plugin",
     "mcp",
+    "mcp-gateway",
     "model-context-protocol",
-    "progressive-disclosure"
+    "progressive-disclosure",
+    "tool-discovery",
+    "tool-routing"
   ],
   "type": "module",
   "sideEffects": false,
@@ -28,9 +31,14 @@
     "src",
     "tests",
     "benchmark",
+    "assets",
     "npm-shrinkwrap.json",
     "cordis.patch.yml",
     "README.md",
+    "README.zh-CN.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "PROMOTION.md",
     "LICENSE",
     "tsconfig.json",
     "tsdown.config.ts"

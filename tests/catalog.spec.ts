@@ -29,6 +29,14 @@ function configured(name: string, fingerprint: string) {
   return { name, fingerprint }
 }
 
+function credentialedHttpUrl(username: string, password: string, token: string): string {
+  const endpoint = new URL('https://example.com/mcp')
+  endpoint.username = username
+  endpoint.password = password
+  endpoint.searchParams.set('access_token', token)
+  return endpoint.href
+}
+
 function tool(
   name: string,
   description: string,
@@ -124,12 +132,12 @@ describe('endpoint freshness', () => {
     const first = serverFingerprint({
       name: 'remote',
       transport: 'streamable-http',
-      url: 'https://alice:header-secret@example.com/mcp?access_token=env-secret',
+      url: credentialedHttpUrl('alice', 'header-secret', 'env-secret'),
     })
     const rotatedSecret = serverFingerprint({
       name: 'remote',
       transport: 'streamable-http',
-      url: 'https://bob:another-secret@example.com/mcp?access_token=rotated',
+      url: credentialedHttpUrl('bob', 'another-secret', 'rotated'),
     })
     const newEndpoint = serverFingerprint({
       name: 'remote',

@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a reproducible MCP Lens defect
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private catalogs, signed URLs, or unpatched exploit details. Use the security policy for vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: MCP Lens version or commit
+      placeholder: v0.1.0-rc.1 or a full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: DSH version, Node version, OS and architecture
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include sanitized config or fixture data and exact commands.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, tokens, private URLs, tenant data and other secrets.
+          required: true
+        - label: This report does not publicly disclose an unpatched vulnerability.
+          required: true

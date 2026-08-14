@@ -1,18 +1,44 @@
-# dsh-mcp-lens
+<p align="center">
+  <img src="assets/mcp-lens-hero.webp" alt="Many MCP tool schemas converge through a lens into two model-facing interfaces" width="100%">
+</p>
 
-`dsh-mcp-lens` turns a large MCP estate into **two fixed model-facing tools** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness):
+# MCP Lens for DeepSeek Harness
 
-- constant standing tool surface, regardless of whether the profile has 10 or 1,000 remote MCP tools,
-- exact selected `inputSchema` disclosure only when needed,
-- release-candidate tarball that remains independently reproducible instead of README-only.
+English | [简体中文](README.zh-CN.md)
 
-- `mcp_search` ranks capabilities and reveals only the selected tools' exact input schemas.
-- `mcp_call` invokes one exact `server/tool` capability.
-- Connections are lazy; catalogs are last-good, TTL-bound, versioned, and atomically cached.
-- `allowTools` and `denyTools` apply identically to search and direct calls.
-- MCP content and `structuredContent` remain available to programmatic callers.
+[![verify](https://github.com/labmimors/dsh-mcp-lens/actions/workflows/verify.yml/badge.svg)](https://github.com/labmimors/dsh-mcp-lens/actions/workflows/verify.yml)
+[![release](https://img.shields.io/github/v/release/labmimors/dsh-mcp-lens?include_prereleases)](https://github.com/labmimors/dsh-mcp-lens/releases)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-developer%20preview-5B5BD6)](https://github.com/deepseek-ai/deepseek-harness)
 
-MCP Lens is for installations with many servers or long-tail tools. If you have a small stable tool set and want one-round native calls, the stock `@deepseek-ai/dsh-mcp-client` is simpler and usually better.
+**1,000 MCP tools. Two model-facing schemas.**
+
+MCP Lens is a progressive-disclosure MCP gateway for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It searches a private tool catalog, reveals only the selected tools' exact input schemas, and invokes one exact capability—without registering every remote tool up front.
+
+> In the reproducible 1,000-tool component benchmark, Harness-visible tool-schema JSON fell from **647,962 B to 1,114 B (99.828%)**. This measures serialized schema bytes, not tokenizer tokens, provider billing, or LLM task quality.
+
+The model always sees two stable interfaces:
+
+- `mcp_search` finds relevant capabilities and reveals their exact `inputSchema`.
+- `mcp_call` invokes one exact `server/tool` with the selected arguments.
+
+Connections are lazy, one failed server does not hide healthy results, and the same fail-closed allow/deny policy governs search and direct calls.
+
+MCP Lens is built for multi-server or long-tail MCP catalogs. For a small, stable set of hot-path tools, the stock `@deepseek-ai/dsh-mcp-client` is simpler and usually better.
+
+> MCP Lens is an independent community plugin. It is not affiliated with or endorsed by DeepSeek AI.
+
+## From intent to one exact tool
+
+```text
+User intent
+   ↓
+mcp_search("find open pull requests by author")
+   ↓
+github/list_pull_requests + exact input schema
+   ↓
+mcp_call("github", "list_pull_requests", arguments)
+```
 
 ## Why this exists
 
@@ -51,41 +77,39 @@ The release tarball deliberately includes the source, fixture, publishable depen
 
 ## Install
 
-The package in this directory is an upload candidate, not a published npm release.
+Prerequisites: DeepSeek Harness `0.1.0-rc.6` and Node.js `^22.19.0` or `>=24.0.0`. Harness is currently in developer preview.
 
-Install the prebuilt candidate tarball with:
+### Recommended: prebuilt GitHub Release
 
 ```sh
-dsh plugin --profile web add /absolute/path/to/dsh-mcp-lens-0.1.0-rc.1.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.2/dsh-mcp-lens-0.1.0-rc.2.tgz
 dsh --profile web --dump-config
 ```
 
-For source development:
+The attached tarball is prebuilt, so pnpm does not need permission to run a dependency build script.
+
+### Source install pinned to a reviewed tag
+
+```sh
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.2
+```
+
+Git installs fetch source and run the package's `prepare` build. pnpm 10+ blocks that script until you explicitly add the exact package key to the profile's `pnpm-workspace.yaml`:
+
+```yaml
+allowBuilds:
+  dsh-mcp-lens: true
+```
+
+Then rerun the pinned install. Treat `allowBuilds` as permission to execute package code on the host; review the source and pin a tag or commit SHA first.
+
+For local development:
 
 ```sh
 dsh plugin --profile web add /absolute/path/to/dsh-mcp-lens
 ```
 
-A GitHub source install needs the package's `prepare` build to be explicitly allowed by pnpm 10+, then pinned to a reviewed commit. A future published release would install as:
-
-```sh
-dsh plugin --profile web add dsh-mcp-lens@next
-```
-
-Once the public repository exists, you can also pin a reviewed GitHub commit directly:
-
-```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#<commit-sha>
-```
-
-Current DeepSeek Harness profiles manage third-party plugins through `dsh plugin`, which forwards package specs to `pnpm`. In practice this means a plugin can be installed from:
-
-- npm package names
-- a local checkout or local tarball
-- a Git-hosted package spec
-- a release tarball URL
-
-For discoverability, publish the repository with the GitHub topic `dsh-plugin`.
+As of August 14, 2026, the official DeepSeek Harness docs point to public GitHub repositories carrying the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic for discovery and to GitHub, tarball, or npm package installation. No separate marketplace upload form was found in the current official docs. See the official [plugin publishing guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.md).
 
 ## Configure
 
@@ -154,38 +178,47 @@ The catalog cache is a derived artifact written atomically with mode `0600`. It 
 - The catalog and ranking operate on untrusted server metadata with discovery deadlines and count/byte caps, but accepted server descriptions and schemas still enter model context when selected and, when persistence is enabled for that server, enter the owner-only cache. Do not configure an MCP server that puts credentials in descriptions or schemas.
 - DeepSeek Harness is in developer preview; its external plugin APIs may change.
 
-## Development
+## Choosing the right MCP adapter
+
+| Option | Best fit | Main trade-off |
+|---|---|---|
+| Official `@deepseek-ai/dsh-mcp-client` | A small, stable hot-path tool set | Registers one model-facing schema per remote tool |
+| MCP Lens | Large, multi-server, or long-tail catalogs | First use normally adds a search step |
+| [`dsh-mcp-proxy`](https://github.com/ben7am1n/dsh-mcp-proxy) | A similarly small lazy search/call proxy | Lens additionally emphasizes exact-schema retrieval evaluation, consistent capability policy, and explicit resource bounds |
+| [`dsh-mcp-adapter`](https://github.com/NexusAgentX/dsh-mcp-adapter) | Web UI, OAuth, and direct-tool promotion | Broader product surface and more moving parts |
+
+This comparison is based on the projects' current public documentation. MCP Lens does not claim to be the first or only search/call adapter.
+
+## Development and reproducibility
 
 ```sh
+npm ci
 npm run typecheck
 npm test
 npm run build
 npm run bench
-npm pack --dry-run
+npm audit --omit=dev
+npm pack --dry-run --json --ignore-scripts
 ```
 
-The implementation intentionally has no UI, OAuth stack, config migration framework, vector database, or model dependency. Its model-facing surface stays at two tools; optional product layers belong in separate plugins.
+The release package intentionally includes source, tests, fixture, benchmark runner, dependency lock, and source maps. That adds package size, but lets an unpacked release reproduce the published component evidence without relying on this README.
 
-## Security posture
+The implementation intentionally has no UI, OAuth stack, config migration framework, vector database, or model dependency. Optional product layers belong in separate plugins.
 
-- This repository intentionally excludes `.env*`, `.npmrc`, runtime catalog files, local DSH state, logs, and release tarballs from Git tracking.
-- Public release verification should always run `npm run verify`, `npm audit --omit=dev`, `npm pack --dry-run`, and a fresh `dsh plugin add` install.
-- If you find a vulnerability, follow [`SECURITY.md`](SECURITY.md) instead of opening a public zero-day issue.
+## Security and contributing
 
-## Launch-ready one-liner
+- Read [`SECURITY.md`](SECURITY.md) before reporting a vulnerability; do not disclose an unpatched exploit in a public issue.
+- See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development and pull-request expectations.
+- Search-quality contributions are especially useful: submit a small, sanitized failing query/tool fixture rather than credentials or a private catalog.
 
-> MCP Lens gives DeepSeek Harness a constant two-tool MCP surface: search first, reveal exact schema second, call third.
+The public launch copy and claim boundaries are recorded in [`PROMOTION.md`](PROMOTION.md). The growth loop is deliberately evidence-led: clone → rerun the benchmark → report a search miss → turn it into a regression case.
 
-## Release surfaces
+## Community status
 
-For a healthy public release, keep these surfaces aligned:
-
-- `README.md`: positioning, install, configuration, and claim boundaries
-- `benchmark/README.md`: exact measurement method and reproduction
-- `package.json`: `dsh.bundle.patch` manifest and publishable file list
-- `cordis.patch.yml`: the bundle entry mounted by Harness
-- GitHub release notes: exact DSH/Node versions verified
-- GitHub topic: `dsh-plugin`
+- GitHub: [labmimors/dsh-mcp-lens](https://github.com/labmimors/dsh-mcp-lens)
+- Release: [`v0.1.0-rc.2`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.2)
+- Issues: [bug reports and search misses](https://github.com/labmimors/dsh-mcp-lens/issues)
+- DeepSeek Harness: developer preview; plugin APIs may change
 
 ## License
 

@@ -1,134 +1,274 @@
-# Promotion Pack
+# MCP Lens launch pack
 
-## GitHub repo description
+This copy is ready to adapt for the public launch. Keep every metric attached to its measurement boundary.
 
-Constant two-tool MCP gateway for DeepSeek Harness: search exact capabilities, reveal exact schemas on demand, and keep model-facing context flat.
+## Positioning
 
-## GitHub About tags
+Primary hook:
 
-`deepseek` `deepseek-harness` `dsh` `dsh-plugin` `mcp` `model-context-protocol` `ai-agents`
+> **1,000 MCP tools. Two model-facing schemas.**
 
-## Launch post: English
+Supporting line:
 
-### Short version
+> Search the catalog. Reveal one exact schema. Call the tool.
 
-Shipping `dsh-mcp-lens`: a DeepSeek Harness plugin that keeps the model-facing MCP surface fixed at 2 tools, even when the profile has hundreds of remote tools.
+Exact evidence statement:
 
-- `mcp_search` finds the right capability
-- `mcp_call` executes the exact `server/tool`
-- lazy connections, fail-closed policy, bounded discovery, reproducible benchmark
+> In the reproducible 1,000-tool component benchmark, Harness-visible tool-schema JSON fell from 647,962 B to 1,114 B, a 99.828% reduction. These are serialized schema bytes, not tokenizer tokens, provider billing, or LLM task-quality evidence.
 
-Measured schema-surface reduction on the same Harness serialization path:
+GitHub description:
 
-- 12 tools: 4,862 → 1,114 bytes
-- 100 tools: 62,062 → 1,114 bytes
-- 1,000 tools: 647,962 → 1,114 bytes
+> Progressive-disclosure MCP gateway for DeepSeek Harness: search and call large MCP catalogs through two fixed model-facing schemas.
 
-This is component evidence, not a blanket model-quality claim.
+Recommended GitHub topics:
 
-Repo: `https://github.com/labmimors/dsh-mcp-lens`
+`deepseek` `deepseek-harness` `dsh-plugin` `mcp` `mcp-gateway` `model-context-protocol` `progressive-disclosure` `tool-discovery` `tool-routing` `context-engineering` `ai-agents` `typescript`
 
-### DeepSeek Discussions / release note version
+## Claim boundary
 
-`dsh-mcp-lens` is a progressive-disclosure MCP gateway for DeepSeek Harness.
+Supported claims:
 
-Instead of registering every remote MCP capability directly into the model-visible tool registry, it keeps a private bounded catalog and exposes only two fixed tools:
+- Lens adds exactly two model-facing schemas regardless of the configured remote catalog size.
+- Exact schema-byte results from the checked-in Harness serialization benchmark.
+- Recall@1, Recall@5 and MRR from the frozen 12-query lexical fixture.
+- Lazy connections, default-deny capability policy, last-good catalogs, server isolation and explicit resource limits.
+- The release verification results recorded in the GitHub release.
 
-1. `mcp_search`
-2. `mcp_call`
+Do not claim:
 
-Why this matters:
+- 99.828% fewer tokens, lower API bills or smaller provider context windows.
+- Higher LLM accuracy, task success, productivity or user satisfaction.
+- SOTA, first, unique, production-ready or official DeepSeek endorsement.
+- A sandbox, zero latency, zero overhead or support for every MCP capability.
+- Cross-platform or remote-production validation beyond recorded evidence.
+- Guaranteed virality.
 
-- constant standing schema surface,
-- better fit for long-tail MCP profiles,
-- fail-closed `allowTools` / `denyTools`,
-- lazy stdio and Streamable HTTP connections,
-- reproducible benchmark and release tarball.
+## GitHub release headline
 
-Measured on the same real Harness `Context`/`ToolRuntime` path and the same stdio fixture for both arms, schema JSON bytes dropped by 77.088% at 12 tools and 99.828% at 1,000 tools.
+> **MCP Lens v0.1.0-rc.2: 1,000 MCP tools, two model-facing schemas**
 
-Boundaries:
+Repository: https://github.com/labmimors/dsh-mcp-lens
 
-- bytes are not tokenizer billing,
-- retrieval fixture is not a user-quality or causal benchmark,
-- this plugin does not add OAuth/resources/prompts/task execution.
+Release: https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.2
 
-## Launch post: 中文
+## X / Twitter
 
-### 短版
+### Single post
 
-发布 `dsh-mcp-lens`：一个给 DeepSeek Harness 用的 MCP 渐进披露插件。
+```text
+1,000 MCP tools shouldn't require 1,000 model-visible schemas.
 
-它不会把 100 个、1000 个 MCP 工具一次性全暴露给模型，而是始终只给模型两个入口：
+MCP Lens gives DeepSeek Harness 2 fixed tools: search, then call.
 
-- `mcp_search`
-- `mcp_call`
+Reproducible Harness benchmark: schema JSON fell from 647,962 to 1,114 bytes (-99.828%).
 
-这样做的好处是：
+Code + benchmark: https://github.com/labmimors/dsh-mcp-lens
+```
 
-- 常驻工具面恒定
-- 更适合长尾 MCP 工具集
-- allow/deny 策略 fail-closed
-- 连接懒建立，坏 server 不拖垮全部结果
+### Thread
 
-同一条 Harness schema 序列化路径下，工具面从：
+```text
+1/ 1,000 MCP tools shouldn't require 1,000 model-visible schemas.
 
-- 12 tools: `4862 → 1114 bytes`
-- 100 tools: `62062 → 1114 bytes`
-- 1000 tools: `647962 → 1114 bytes`
+I built MCP Lens for DeepSeek Harness: the model always sees two fixed tools—search, then call.
 
-这是组件级证据，不是“模型效果全面提升”的泛化宣传。
+At 1,000 tools, schema JSON fell from 647,962 to 1,114 bytes (-99.828%).
+```
 
-仓库：`https://github.com/labmimors/dsh-mcp-lens`
+```text
+2/ The direct MCP client is simple and usually best for a small, stable tool set. With many servers and long-tail tools, however, the standing model-visible schema surface grows with the whole catalog.
+```
 
-## X / Twitter thread
+```text
+3/ MCP Lens keeps the interface constant:
 
-1. Most MCP integrations for agents fail the same way: too many tools get exposed all at once.
+• mcp_search finds relevant capabilities and reveals exact selected input schemas
+• mcp_call invokes one exact server/tool
 
-2. I built `dsh-mcp-lens` for DeepSeek Harness to keep the model-facing MCP surface fixed at 2 tools:
-   - `mcp_search`
-   - `mcp_call`
+Connections stay lazy; one unhealthy server does not hide healthy results.
+```
 
-3. The model searches first, sees only the exact selected schema, then calls the exact `server/tool`.
+```text
+4/ Benchmark method: real Harness Context, SystemPrompt and ToolRuntime, with the official dsh-mcp-client as baseline.
 
-4. Same Harness serialization path, exact schema JSON bytes:
-   - 12 tools: 4862 → 1114
-   - 100 tools: 62062 → 1114
-   - 1000 tools: 647962 → 1114
+Metric: UTF-8 bytes of JSON.stringify(ctx.tools.schemas()).
 
-5. It also ships with:
-   - lazy stdio / Streamable HTTP connections
-   - fail-closed allow/deny policy
-   - bounded discovery
-   - reproducible tarball benchmark
+12 tools: -77.088%
+100 tools: -98.205%
+1,000 tools: -99.828%
+```
 
-6. Important boundary: this is component evidence, not “all model tasks got better”.
+```text
+5/ Important boundary: these are serialized schema bytes—not tokens, provider billing or LLM task quality.
 
-7. If your DSH profile has a long tail of MCP tools, this is the plugin to try.
+The repository contains the source, fixture, lock and benchmark runner so you can challenge the result.
+```
 
-Repo: `https://github.com/labmimors/dsh-mcp-lens`
+```text
+6/ Security defaults matter because mcp_call compresses many capabilities behind one name.
 
-## LinkedIn post
+MCP Lens ships with allowTools: []. Deny wins. Search and direct calls use the same policy. Credential-scoped catalogs remain memory-only unless explicitly namespaced.
+```
 
-Agent tool surfaces are quietly becoming a scaling bottleneck.
+```text
+7/ Trade-off: first use normally adds a search step and cold connection. If you only have a few stable tools, use the official client.
 
-Once a DeepSeek Harness profile starts carrying dozens or hundreds of MCP tools, the problem is no longer “can the model call tools?” The problem becomes “how much tool surface do we keep permanently visible, and how much should stay private until the task actually needs it?”
+Clone it, rerun the benchmark, and report a real search miss:
+https://github.com/labmimors/dsh-mcp-lens
+```
 
-I built `dsh-mcp-lens` to push that boundary in a simple way:
+## LinkedIn
 
-- keep the model-facing MCP surface fixed at 2 tools,
-- search the private capability catalog first,
-- reveal only the exact selected `inputSchema`,
-- then execute the exact `server/tool`.
+```text
+Most MCP setups expose every tool schema up front.
 
-On the same Harness serialization path, visible schema JSON bytes dropped from 647,962 to 1,114 at 1,000 remote tools.
+That is simple—until the catalog gets large.
 
-This is not a blanket model-quality claim. It is a focused, reproducible component result for long-tail MCP profiles.
+I’m open-sourcing MCP Lens, a progressive-disclosure MCP gateway for DeepSeek Harness. No matter how many remote MCP tools are configured, the model sees two fixed interfaces:
 
-If you are building DeepSeek Harness setups with many tools, this is the pattern I would test first.
+→ mcp_search: find capabilities and reveal exact selected schemas
+→ mcp_call: invoke one exact server/tool
 
-Repo: `https://github.com/labmimors/dsh-mcp-lens`
+Measured with a real Harness Context, SystemPrompt and ToolRuntime:
 
-## Short-video hook
+12 tools: 4,862 → 1,114 schema JSON bytes
+100 tools: 62,062 → 1,114
+1,000 tools: 647,962 → 1,114
 
-“Your agent does not need to see 1,000 tools all the time. It needs to find the right one at the right moment.”
+That last result is a 99.828% reduction in this exact schema-surface metric. It is not a token, billing or model-quality claim. The benchmark, fixtures and dependency lock are included so anyone can reproduce it.
+
+The implementation also ships default-deny capability policy, lazy stdio and Streamable HTTP connections, last-good catalogs, failure isolation and explicit discovery/response limits.
+
+For a few stable tools, the official client remains simpler. For a large or long-tail catalog, I’d like you to break my assumptions:
+
+https://github.com/labmimors/dsh-mcp-lens
+
+What is the largest MCP tool catalog you are operating today?
+
+#DeepSeek #ModelContextProtocol #OpenSource
+```
+
+## Show HN
+
+Title:
+
+```text
+Show HN: MCP Lens – Two fixed tools for large MCP catalogs in DeepSeek Harness
+```
+
+Body:
+
+```text
+Hi HN,
+
+I made MCP Lens because the direct MCP approach registers one model-facing schema per remote tool. That is the simplest design for a small set, but the standing schema surface grows with large or long-tail catalogs.
+
+MCP Lens is a DeepSeek Harness plugin exposing two tools:
+
+- mcp_search searches a private catalog and returns selected exact input schemas
+- mcp_call invokes one exact server/tool
+
+In the checked-in benchmark, using a real Harness Context, SystemPrompt and ToolRuntime and the official dsh-mcp-client as baseline:
+
+- 12 tools: 4,862 → 1,114 JSON bytes
+- 100 tools: 62,062 → 1,114
+- 1,000 tools: 647,962 → 1,114
+
+The metric is UTF-8 bytes of JSON.stringify(ctx.tools.schemas()). It is not token, billing or LLM task-success evidence.
+
+The package includes 58 tests, real stdio and Streamable HTTP fixtures, default-deny policy, bounded discovery, lazy connections and last-good catalog caching. First use adds a search step; for a few stable tools, the official client is simpler.
+
+Source and reproduction: https://github.com/labmimors/dsh-mcp-lens
+
+I would especially value feedback on catalog/cache failure modes, real-world ranking misses and whether the two-tool boundary composes with your agent policy.
+```
+
+## DeepSeek Harness GitHub Discussion
+
+Title:
+
+```text
+Show and tell: dsh-mcp-lens – progressive-disclosure MCP with two fixed tools
+```
+
+Body:
+
+```md
+I’m sharing an independent community plugin for DeepSeek Harness:
+
+**dsh-mcp-lens** keeps the model-facing MCP surface at `mcp_search` and `mcp_call`, regardless of remote catalog size.
+
+Repository: https://github.com/labmimors/dsh-mcp-lens
+
+The official direct client remains simpler for a small stable tool set. Lens is intended for larger long-tail catalogs, where it discovers capabilities before revealing exact schemas.
+
+| Remote tools | Official client schema JSON | Lens schema JSON |
+|---:|---:|---:|
+| 12 | 4,862 B | 1,114 B |
+| 100 | 62,062 B | 1,114 B |
+| 1,000 | 647,962 B | 1,114 B |
+
+Metric: UTF-8 bytes of `JSON.stringify(ctx.tools.schemas())`. This is not a token, billing or task-quality claim.
+
+Safety/lifecycle: `allowTools: []` by default; the same search/call policy; lazy stdio and Streamable HTTP; bounded discovery and responses; last-good catalogs; credential-scoped catalogs stay memory-only unless explicitly namespaced.
+
+Feedback requested: two-tool integration boundaries, real ranking misses, `tools/list_changed` lifecycle behavior and future Harness API changes.
+```
+
+## DeepSeek Discord
+
+```text
+I’ve released an independent Harness community plugin: dsh-mcp-lens.
+
+It keeps large MCP catalogs behind two model-facing tools: mcp_search and mcp_call.
+
+Reproducible Harness schema-surface benchmark:
+12 tools: 4,862 → 1,114 JSON bytes
+100 tools: 62,062 → 1,114
+1,000 tools: 647,962 → 1,114 (-99.828%)
+
+These are serialized schema bytes—not tokens, billing or task-success claims.
+
+Repo: https://github.com/labmimors/dsh-mcp-lens
+
+I’m looking for real catalog search misses and lifecycle/security review.
+```
+
+## 中文短帖
+
+```text
+为了调用一个工具，Agent 不该先加载一千份 MCP Schema。
+
+我开源了 MCP Lens：一个给 DeepSeek Harness 用的渐进披露 MCP 网关。
+
+模型始终只看到两个入口：
+1. mcp_search：找到当前任务需要的工具，并返回准确 Schema
+2. mcp_call：调用指定的 server/tool
+
+可复现 Harness 基准：
+12 个工具：4,862 → 1,114 bytes
+100 个工具：62,062 → 1,114 bytes
+1,000 个工具：647,962 → 1,114 bytes（下降 99.828%）
+
+这是 Schema JSON bytes，不是 Token、账单或模型质量数据。源码、测试、Fixture 和 Benchmark Runner 全部公开。
+
+工具少且固定时，官方 Client 更简单；工具目录很大时，欢迎复测并提交真实 Search Miss。
+
+https://github.com/labmimors/dsh-mcp-lens
+```
+
+## First-hour operating plan
+
+1. Pin one reply defining the benchmark metric and limits.
+2. Answer technical questions with code, tests or a clear admission of an unknown.
+3. Turn real installation failures and search misses into public issues.
+4. Do not ask for votes, coordinate artificial engagement, or imply official endorsement.
+5. Invite reproducible artifacts: tool count, sanitized fixture, environment and benchmark output.
+
+The intended growth loop is:
+
+> Clone → rerun benchmark → publish artifact → report search miss → become contributor.
+
+## Visual guidance
+
+Use `assets/mcp-lens-hero.webp` as the common visual. It was generated without text, numbers, logos, testimonials or official marks. Keep exact numbers and product text in HTML/SVG/Markdown overlays rather than asking an image model to render them.

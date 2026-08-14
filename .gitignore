@@ -7,7 +7,6 @@ coverage/
 .npmrc
 *.log
 benchmark.json
-assets/
 .dsh/
 catalog.json
 catalog-*.json

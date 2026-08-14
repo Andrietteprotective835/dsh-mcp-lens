@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a focused capability or protocol improvement
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete Harness or MCP workflow is blocked today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Smallest useful solution
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Model-surface, security and lifecycle trade-offs
+      description: Explain effects on the two-tool contract, policy, caching and resource bounds.
+    validations:
+      required: true
