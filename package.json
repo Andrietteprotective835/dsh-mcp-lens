@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-lens",
-  "version": "0.1.0-rc.2",
+  "version": "0.1.0-rc.3",
   "description": "Cut MCP context and API cost in DeepSeek Harness with two model-facing tools, lazy discovery, and exact-schema calls",
   "keywords": [
     "deepseek",
