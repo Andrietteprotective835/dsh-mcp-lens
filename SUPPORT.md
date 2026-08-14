@@ -1,17 +1,20 @@
-# Support
+# MCP Lens Support
 
-Effective date: August 14, 2026
+Effective date: August 15, 2026
+
+Support is provided on a best-effort basis with no guaranteed response time or service-level agreement.
 
 ## Best channel by issue type
 
 - Usage questions and setup help: [GitHub Discussions](https://github.com/labmimors/dsh-mcp-lens/discussions)
 - Bugs and reproducible regressions: [GitHub Issues](https://github.com/labmimors/dsh-mcp-lens/issues)
-- Search ranking misses for MCP retrieval: [search miss template](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)
-- Security vulnerabilities: [`SECURITY.md`](SECURITY.md) and [private vulnerability reporting](https://github.com/labmimors/dsh-mcp-lens/security/advisories/new)
+- Search ranking misses: [search miss template](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)
+- Security vulnerabilities and confidential security information: [private vulnerability reporting](https://github.com/labmimors/dsh-mcp-lens/security/advisories/new) and [SECURITY.md](SECURITY.md)
+- Privacy questions about this repository: open a GitHub Discussion without personal or confidential data; use private vulnerability reporting if the question itself contains sensitive security information
 
 ## What to include
 
-Please include:
+Please include only sanitized information:
 
 1. the release tag or full commit SHA,
 2. DeepSeek Harness version,
@@ -19,12 +22,6 @@ Please include:
 4. OS and architecture,
 5. minimal reproduction steps,
 6. expected and actual behavior,
-7. whether the issue affects the plugin, the GitHub Action, or the static site.
+7. whether the issue affects the plugin, GitHub Action, or static site.
 
-## Response targets
-
-- Initial maintainer triage: three business days
-- Reproduction follow-up for normal bugs: seven business days
-- Security issues: see [`SECURITY.md`](SECURITY.md)
-
-These are targets, not a guaranteed service-level agreement.
+Do not post API keys, credentials, private schemas, customer data, or unpatched exploit details in public channels.

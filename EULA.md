@@ -1,53 +1,25 @@
-## MCP Lens End User License Agreement
+# MCP Lens End User License Agreement
 
-Effective date: August 14, 2026
+Effective date: August 15, 2026
 
-This End User License Agreement ("EULA") governs use of the MCP Lens software, release artifacts, and GitHub Action published from this repository.
+This separate Marketplace EULA applies to the MCP Lens source code, GitHub Action, and bundled software artifacts published from this repository.
 
-### 1. License grant
+## Governing license
 
-Subject to this EULA and the repository license terms, you are granted a non-exclusive, non-transferable, revocable license to use, copy, and run MCP Lens for your internal or external workflows.
+MCP Lens is licensed under the [MIT License](LICENSE). This EULA incorporates that license by reference and does not narrow, revoke, or add restrictions to any right granted by it. If this notice and the MIT License are ever read differently, the MIT License controls.
 
-### 2. Open-source license
+## No hosted service
 
-MCP Lens source code is also distributed under the MIT License in [`LICENSE`](LICENSE). If any term in this EULA conflicts with the MIT License for code you received under that license, the MIT License controls for that code.
+MCP Lens is distributed as software, not as a maintainer-operated hosted service. The maintainers do not receive runtime tool payloads through the Action, plugin, or static calculator and do not provide an uptime commitment, managed data-processing service, or service-level agreement.
 
-### 3. Operator responsibility
+## User-controlled integrations
 
-You are responsible for:
+You decide which model providers, MCP servers, local commands, credentials, headers, repositories, and workflow artifacts to connect. Those third-party services and your use of them are governed by their own terms and policies.
 
-- reviewing the code, release notes, and configuration before use,
-- deciding which MCP servers, credentials, headers, commands, and tools are trusted,
-- complying with laws, policies, contracts, and internal review requirements that apply to your environment,
-- validating benchmarks, budgets, and operational claims against your own workload.
+## Warranty and liability
 
-### 4. No hosted service
+The warranty disclaimer and limitation of liability in the MIT License apply. No additional warranty, indemnity, or support commitment is created by this notice.
 
-MCP Lens is distributed as software artifacts only. The maintainers do not provide a managed hosted service, uptime commitment, or data-processing service agreement through this repository.
+## Support and privacy
 
-### 5. External systems and data flow
-
-Depending on how you configure it, MCP Lens may:
-
-- launch local stdio MCP servers,
-- connect to remote Streamable HTTP MCP servers,
-- send selected tool descriptions or schemas into model context,
-- transmit tool-call arguments to your configured MCP endpoints and model providers.
-
-You control those integrations and remain responsible for the data you route through them.
-
-### 6. No warranty
-
-MCP Lens is provided "as is" and "as available," without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement, to the maximum extent permitted by law.
-
-### 7. Limitation of liability
-
-To the maximum extent permitted by law, the maintainers and contributors will not be liable for indirect, incidental, special, consequential, or exemplary damages arising from use of MCP Lens. If liability cannot be excluded, it is limited to the amount you paid for the specific artifact giving rise to the claim; for free artifacts, that amount is zero.
-
-### 8. Termination
-
-Your rights under this EULA terminate automatically if you materially violate it. Upon termination, you must stop using MCP Lens and remove copies under your control, except where an applicable open-source license separately permits continued use.
-
-### 9. Support
-
-Support is provided on a best-effort basis through the channels listed in [`SUPPORT.md`](SUPPORT.md). Security issues must follow [`SECURITY.md`](SECURITY.md).
+Best-effort support channels are listed in [SUPPORT.md](SUPPORT.md). Data-handling boundaries are described in [PRIVACY.md](PRIVACY.md), and security reports must follow [SECURITY.md](SECURITY.md).

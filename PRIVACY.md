@@ -1,60 +1,33 @@
-# Privacy Notice
+# MCP Lens Privacy Notice
 
-Effective date: August 14, 2026
+Effective date: August 15, 2026
 
-This notice explains the data-handling boundaries for MCP Lens artifacts published from this repository.
+This notice covers the MCP Lens plugin, `MCP Lens Schema Audit` GitHub Action, static calculator and study pages, and project support channels. The project maintainer is the GitHub account [`labmimors`](https://github.com/labmimors). Contact routes are listed in [SUPPORT.md](SUPPORT.md).
 
-## What is covered
+## No maintainer-operated runtime collection
 
-- the DeepSeek Harness plugin in this repository,
-- the `MCP Lens Schema Audit` GitHub Action,
-- the static calculator and study pages published from this repository.
+The shipped plugin, Action, and static calculator do not contain maintainer-operated telemetry, analytics beacons, advertising pixels, or call-home endpoints.
 
-## Data the maintainers do not collect directly
+- The Action reads the workspace-relative JSON file you choose, makes no network request, and writes numeric outputs only.
+- The calculator processes pasted data in the browser and has no upload endpoint.
+- The plugin communicates only with model providers, MCP servers, commands, and cache paths that you configure.
 
-The shipped plugin, GitHub Action, and static calculator do not include built-in telemetry, analytics beacons, ad pixels, or maintainer-operated call-home endpoints.
+The maintainers therefore do not receive your runtime prompts, schemas, credentials, tool arguments, tool results, or workflow payloads through MCP Lens itself.
 
-## Data flow you control
+## Data flows you configure
 
-MCP Lens can process data that you choose to route through it:
+Depending on your configuration, data may be processed by your model provider, MCP servers, GitHub Actions runner, local commands, and local filesystem cache. Those systems are selected and controlled by you; their own privacy, retention, and location terms apply.
 
-- MCP server names, tool names, descriptions, and input schemas discovered from configured servers,
-- tool-call arguments and tool results,
-- model prompts and model-visible tool context assembled by your Harness profile,
-- HTTP headers or local command invocations that you configure for your own servers.
+When configured with a cache path, MCP Lens stores projected catalog metadata locally with owner-only permissions (`0600`) where supported. The cache is intended to contain projected tool metadata, not explicit environment-variable, header, or URL credential values.
 
-That data may be sent to:
+## Information you voluntarily send for support
 
-- your configured model provider,
-- your configured MCP servers,
-- your local filesystem cache, if caching is enabled.
+If you open a GitHub Issue or Discussion, submit a private security advisory, or otherwise contact the maintainers through GitHub, the maintainers receive the account information and content you choose to provide. It is used only to operate the project, answer support requests, investigate defects or security reports, and maintain public regression evidence.
 
-## Local storage
+GitHub hosts and processes those communications under its own policies and may store them in countries where GitHub operates. Public Issues and Discussions may remain in repository history. Use private vulnerability reporting for confidential security information, do not submit credentials or customer data, and remove unnecessary personal information before posting.
 
-When configured with a cache path, MCP Lens stores projected catalog metadata locally with owner-only permissions (`0600`) where supported. The cache is intended to contain projected tool metadata, not raw secret values. Operators remain responsible for host security, backups, and disk access control.
-
-## GitHub Action boundaries
-
-`MCP Lens Schema Audit` runs inside GitHub Actions on a JSON payload you provide from your repository or workflow workspace.
-
-- It performs no network requests.
-- It writes numeric outputs only.
-- It does not intentionally copy tool names, descriptions, or schemas into the GitHub Step Summary.
-
-Workflow logs, retention, and access are governed by your GitHub repository settings and GitHub's policies.
-
-## Static site boundaries
-
-The published calculator is designed for local-only measurement in the browser. Your pasted tool payload stays in the browser session unless you separately choose to share exported artifacts or links.
+Where GitHub's features and applicable rules allow, you may edit or delete content you submitted or ask the maintainer through the channels in [SUPPORT.md](SUPPORT.md) to minimize it. The project does not sell support-contact data or use it for advertising.
 
 ## Third-party services
 
-If you connect MCP Lens to third-party model providers, MCP servers, GitHub, or other services, their privacy terms and retention policies apply independently.
-
-## Security reporting
-
-Do not send secrets or live credentials in public issues. For vulnerabilities, use the process in [`SECURITY.md`](SECURITY.md).
-
-## Contact
-
-For product support or privacy questions about this repository, use the channels listed in [`SUPPORT.md`](SUPPORT.md).
+Model providers, MCP servers, GitHub, and other services you connect are independent third parties. This notice does not replace their privacy terms or your responsibility to configure access, retention, and data location appropriately.
