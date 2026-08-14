@@ -1,12 +1,12 @@
 {
   "name": "dsh-mcp-lens",
-  "version": "0.1.0-rc.2",
+  "version": "0.1.0-rc.3",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "dsh-mcp-lens",
-      "version": "0.1.0-rc.2",
+      "version": "0.1.0-rc.3",
       "license": "MIT",
       "dependencies": {
         "@deepseek-ai/schemastery": "^3.18.1",
