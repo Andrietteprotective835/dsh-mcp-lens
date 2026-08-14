@@ -11,6 +11,8 @@ English | [简体中文](README.zh-CN.md)
 
 MCP Lens lets DeepSeek Harness search and call 1,000 remote tools through two stable model-facing interfaces. Instead of sending every tool schema on every turn, it reveals exact schemas for a small ranked set only when a tool is needed.
 
+Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes in the browser and generate a shareable comparison card.
+
 <p align="center">
   <img src="assets/mcp-lens-comparison.svg" alt="Live DeepSeek Harness comparison: MCP Lens reduced model-visible tools, request tool JSON, and estimated API cost while both arms completed three of three tasks" width="100%">
 </p>
@@ -228,6 +230,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 ## Security, development, and community
 
 - Useful on your catalog? [Star the repository](https://github.com/labmimors/dsh-mcp-lens) and [share the catalog size you tested](https://github.com/labmimors/dsh-mcp-lens/discussions/7); real workloads help the next user decide.
+- Want a quick before/after number? Use the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to paste your current tool surface, compute exact UTF-8 bytes, and export a shareable card without uploading your schemas.
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
 - Contributions: read [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.

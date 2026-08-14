@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MCP Lens Catalog Calculator</title>
+    <meta
+      name="description"
+      content="Paste your MCP tool schemas locally. Measure exact UTF-8 schema bytes, compare against MCP Lens's fixed two-tool surface, and export a shareable card."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Local-only calculator</p>
+        <h1>How much MCP schema are you handing to the model?</h1>
+        <p class="lede">
+          Paste a tool-schema JSON payload from your own setup. The page stays local,
+          computes exact UTF-8 bytes, compares it with MCP Lens's fixed two-tool
+          surface, and generates a shareable result card.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/labmimors/dsh-mcp-lens">Install MCP Lens</a>
+          <a class="button button-secondary" href="https://github.com/labmimors/dsh-mcp-lens/discussions/7">Share your catalog size</a>
+        </div>
+        <p class="microcopy">
+          No upload. No API call. Parsing and rendering happen in your browser only.
+        </p>
+      </section>
+
+      <section class="panel panel-grid">
+        <div class="panel-block">
+          <label class="label" for="schema-input">Paste JSON</label>
+          <textarea
+            id="schema-input"
+            spellcheck="false"
+            placeholder='Paste an array of tool schemas, {"tools":[...]}, or {"schemas":[...]}'
+          ></textarea>
+          <div class="toolbar">
+            <button class="button button-primary" id="analyze-button" type="button">Analyze locally</button>
+            <button class="button button-secondary" id="sample-button" type="button">Load 1,000-tool sample</button>
+            <button class="button button-ghost" id="clear-button" type="button">Clear</button>
+          </div>
+          <p class="hint">
+            Accepted shapes: an array of tool objects, or an object with
+            <code>tools</code>, <code>schemas</code>, or
+            <code>request.header.tools</code>.
+          </p>
+        </div>
+
+        <div class="panel-block">
+          <div id="status" class="status" role="status" aria-live="polite">
+            Ready. Paste your current model-visible tool schemas and run the local calculation.
+          </div>
+          <div class="metrics" id="metrics">
+            <article class="metric-card">
+              <p class="metric-label">Detected tools</p>
+              <p class="metric-value" id="tool-count">0</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Exact UTF-8 bytes</p>
+              <p class="metric-value" id="schema-bytes">0 B</p>
+            </article>
+            <article class="metric-card metric-card-accent">
+              <p class="metric-label">MCP Lens surface</p>
+              <p class="metric-value" id="lens-surface">2 tools / 1,114 B</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Reduction</p>
+              <p class="metric-value" id="reduction">0%</p>
+            </article>
+          </div>
+          <div class="comparison" id="comparison">
+            <div class="comparison-row">
+              <span>Your current surface</span>
+              <strong id="current-summary">0 tools / 0 B</strong>
+            </div>
+            <div class="comparison-row">
+              <span>MCP Lens component benchmark</span>
+              <strong>2 tools / 1,114 B</strong>
+            </div>
+            <div class="comparison-row">
+              <span>Shareable claim boundary</span>
+              <strong id="claim-boundary">Schema bytes only</strong>
+            </div>
+          </div>
+          <div class="toolbar toolbar-wrap">
+            <button class="button button-secondary" id="copy-summary-button" type="button">Copy summary</button>
+            <button class="button button-secondary" id="copy-command-button" type="button">Copy repro command</button>
+            <button class="button button-secondary" id="download-card-button" type="button">Download card</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Shareable card preview</h2>
+          <p>The exported card includes the exact inputs used for the local calculation.</p>
+        </div>
+        <canvas id="share-card" width="1600" height="900" aria-label="Shareable result card preview"></canvas>
+      </section>
+
+      <section class="panel panel-grid panel-grid-tight">
+        <article class="panel-block prose">
+          <h2>What this measures</h2>
+          <ul>
+            <li>Exact UTF-8 bytes of canonical <code>JSON.stringify(...)</code> output in your browser.</li>
+            <li>Detected model-visible tool count in the pasted payload.</li>
+            <li>Difference versus MCP Lens's checked-in component benchmark at 1,000 tools: 2 tools and 1,114 bytes.</li>
+          </ul>
+        </article>
+        <article class="panel-block prose">
+          <h2>What this does not claim</h2>
+          <ul>
+            <li>Schema bytes are not tokenizer tokens, provider bills, latency, or task quality.</li>
+            <li>The live V4 Flash pilot in the repository is a separate three-task measurement with explicit dates and caveats.</li>
+            <li>This page never uploads your schemas; share only what you are comfortable publishing.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
