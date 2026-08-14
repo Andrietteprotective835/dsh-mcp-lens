@@ -1,11 +1,17 @@
-const LENS_SURFACE = {
+export const BENCHMARK_SOURCE_FILES = Object.freeze([
+  "benchmark/run.ts",
+  "benchmark/README.md",
+])
+
+export const LENS_SURFACE = Object.freeze({
   tools: 2,
   bytes: 1114,
   source:
-    "MCP Lens checked-in component benchmark at 1,000 advertised remote tools",
-}
+    "MCP Lens checked-in component benchmark at 1,000 advertised remote tools; implementation and method: benchmark/run.ts + benchmark/README.md",
+  sourceFiles: BENCHMARK_SOURCE_FILES,
+})
 
-const SAMPLE_TOOLS = Array.from({ length: 1000 }, (_, index) => ({
+export const SAMPLE_TOOLS = Object.freeze(Array.from({ length: 1000 }, (_, index) => ({
   name: `tool_${String(index + 1).padStart(4, "0")}`,
   description: `Synthetic remote tool ${index + 1} for local calculator preview`,
   inputSchema: {
@@ -17,53 +23,59 @@ const SAMPLE_TOOLS = Array.from({ length: 1000 }, (_, index) => ({
     required: ["query"],
     additionalProperties: false,
   },
-}))
+})))
 
-const elements = {
-  input: document.getElementById("schema-input"),
-  status: document.getElementById("status"),
-  toolCount: document.getElementById("tool-count"),
-  schemaBytes: document.getElementById("schema-bytes"),
-  lensSurface: document.getElementById("lens-surface"),
-  reduction: document.getElementById("reduction"),
-  currentSummary: document.getElementById("current-summary"),
-  claimBoundary: document.getElementById("claim-boundary"),
-  analyzeButton: document.getElementById("analyze-button"),
-  sampleButton: document.getElementById("sample-button"),
-  clearButton: document.getElementById("clear-button"),
-  copySummaryButton: document.getElementById("copy-summary-button"),
-  copyCommandButton: document.getElementById("copy-command-button"),
-  downloadCardButton: document.getElementById("download-card-button"),
-  canvas: document.getElementById("share-card"),
-}
-
-const context = elements.canvas.getContext("2d")
+let elements
+let context
 let currentResult = createResult([], "No payload yet.")
 
-elements.lensSurface.textContent = `${LENS_SURFACE.tools} tools / ${formatBytes(LENS_SURFACE.bytes)}`
+if (typeof document !== "undefined") initializePage()
 
-elements.analyzeButton.addEventListener("click", () => analyzeInput(elements.input.value))
-elements.sampleButton.addEventListener("click", () => {
-  elements.input.value = JSON.stringify(SAMPLE_TOOLS, null, 2)
-  analyzeInput(elements.input.value)
-})
-elements.clearButton.addEventListener("click", () => {
-  elements.input.value = ""
-  currentResult = createResult([], "Cleared.")
-  renderResult()
-})
-elements.copySummaryButton.addEventListener("click", async () => {
-  if (!currentResult.summary) return
-  await navigator.clipboard.writeText(currentResult.summary)
-  setStatus("Copied summary to clipboard.")
-})
-elements.copyCommandButton.addEventListener("click", async () => {
-  await navigator.clipboard.writeText(buildReproCommand())
-  setStatus("Copied the local reproduction command.")
-})
-elements.downloadCardButton.addEventListener("click", () => downloadCard())
+function initializePage() {
+  elements = {
+    input: document.getElementById("schema-input"),
+    status: document.getElementById("status"),
+    toolCount: document.getElementById("tool-count"),
+    schemaBytes: document.getElementById("schema-bytes"),
+    lensSurface: document.getElementById("lens-surface"),
+    reduction: document.getElementById("reduction"),
+    currentSummary: document.getElementById("current-summary"),
+    claimBoundary: document.getElementById("claim-boundary"),
+    analyzeButton: document.getElementById("analyze-button"),
+    sampleButton: document.getElementById("sample-button"),
+    clearButton: document.getElementById("clear-button"),
+    copySummaryButton: document.getElementById("copy-summary-button"),
+    copyCommandButton: document.getElementById("copy-command-button"),
+    downloadCardButton: document.getElementById("download-card-button"),
+    canvas: document.getElementById("share-card"),
+  }
 
-analyzeInput("")
+  context = elements.canvas.getContext("2d")
+  elements.lensSurface.textContent = `${LENS_SURFACE.tools} tools / ${formatBytes(LENS_SURFACE.bytes)}`
+
+  elements.analyzeButton.addEventListener("click", () => analyzeInput(elements.input.value))
+  elements.sampleButton.addEventListener("click", () => {
+    elements.input.value = JSON.stringify(SAMPLE_TOOLS, null, 2)
+    analyzeInput(elements.input.value)
+  })
+  elements.clearButton.addEventListener("click", () => {
+    elements.input.value = ""
+    currentResult = createResult([], "Cleared.")
+    renderResult()
+  })
+  elements.copySummaryButton.addEventListener("click", async () => {
+    if (!currentResult.summary) return
+    await navigator.clipboard.writeText(currentResult.summary)
+    setStatus("Copied summary to clipboard.")
+  })
+  elements.copyCommandButton.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(buildReproCommand())
+    setStatus("Copied the local reproduction command.")
+  })
+  elements.downloadCardButton.addEventListener("click", () => downloadCard())
+
+  analyzeInput("")
+}
 
 function analyzeInput(raw) {
   if (!raw.trim()) {
@@ -74,13 +86,13 @@ function analyzeInput(raw) {
 
   try {
     const parsed = JSON.parse(raw)
-    const tools = extractTools(parsed)
-    const canonical = JSON.stringify(tools)
-    const bytes = utf8Bytes(canonical)
+    const measurement = measurePayload(parsed)
+    const tools = measurement.tools
+    const bytes = measurement.bytes
     currentResult = createResult(tools, `${tools.length} tools parsed locally. Exact UTF-8 bytes measured in your browser.`)
     currentResult.bytes = bytes
     currentResult.currentSummary = `${formatInteger(tools.length)} tools / ${formatBytes(bytes)}`
-    currentResult.reductionPercent = reductionPercent(bytes, LENS_SURFACE.bytes)
+    currentResult.reductionPercent = measurement.reductionPercent
     currentResult.summary = [
       `Current model-visible MCP surface: ${formatInteger(tools.length)} tools / ${formatBytes(bytes)}.`,
       `MCP Lens component benchmark surface: ${LENS_SURFACE.tools} tools / ${formatBytes(LENS_SURFACE.bytes)}.`,
@@ -97,7 +109,7 @@ function analyzeInput(raw) {
   renderResult()
 }
 
-function extractTools(value) {
+export function extractTools(value) {
   if (Array.isArray(value)) return value
   if (value && typeof value === "object") {
     if (Array.isArray(value.tools)) return value.tools
@@ -109,6 +121,18 @@ function extractTools(value) {
   }
 
   throw new Error("Expected an array, {tools:[...]}, {schemas:[...]}, or {request:{header:{tools:[...]}}}.")
+}
+
+export function measurePayload(value) {
+  const tools = extractTools(value)
+  const bytes = utf8Bytes(JSON.stringify(tools))
+
+  return {
+    tools,
+    toolCount: tools.length,
+    bytes,
+    reductionPercent: reductionPercent(bytes, LENS_SURFACE.bytes),
+  }
 }
 
 function createResult(tools, status) {
@@ -193,7 +217,7 @@ function renderCard() {
 
   ctx.fillStyle = "#5d5548"
   ctx.font = "400 21px IBM Plex Sans, sans-serif"
-  ctx.fillText("Lens component benchmark source: benchmark.json and benchmark/README.md", 80, 852)
+  ctx.fillText("Source: benchmark/run.ts + benchmark/README.md in the linked repository", 80, 852)
 }
 
 function metricBlock(ctx, x, y, label, value, accent) {
@@ -247,7 +271,7 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   if (line) ctx.fillText(line, x, cursorY)
 }
 
-function utf8Bytes(value) {
+export function utf8Bytes(value) {
   return new TextEncoder().encode(value).length
 }
 
@@ -259,7 +283,7 @@ function formatBytes(bytes) {
   return `${formatInteger(bytes)} B`
 }
 
-function reductionPercent(currentBytes, lensBytes) {
+export function reductionPercent(currentBytes, lensBytes) {
   if (currentBytes <= 0 || currentBytes <= lensBytes) return 0
   return ((currentBytes - lensBytes) / currentBytes) * 100
 }

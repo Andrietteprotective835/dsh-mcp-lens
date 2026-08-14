@@ -1,0 +1,131 @@
+import { access, readFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+const siteRoot = join(repositoryRoot, 'site')
+const appPath = join(siteRoot, 'app.js')
+
+interface SiteModule {
+  BENCHMARK_SOURCE_FILES: readonly string[]
+  LENS_SURFACE: Readonly<{ tools: number, bytes: number }>
+  SAMPLE_TOOLS: readonly unknown[]
+  measurePayload(value: unknown): {
+    tools: readonly unknown[]
+    toolCount: number
+    bytes: number
+    reductionPercent: number
+  }
+  reductionPercent(currentBytes: number, lensBytes: number): number
+  utf8Bytes(value: string): number
+}
+
+async function loadSiteModule(): Promise<SiteModule> {
+  return await import(pathToFileURL(appPath).href) as SiteModule
+}
+
+function localMarkdownTargets(markdown: string): string[] {
+  return [...markdown.matchAll(/!?(?:\[[^\]]*\])\(([^)]+)\)/g)]
+    .map(match => match[1])
+    .filter((target): target is string => Boolean(target))
+    .filter(target => !/^(?:https?:|mailto:|#)/.test(target))
+    .map(target => decodeURIComponent(target.split('#', 1)[0] ?? ''))
+}
+
+describe('catalog calculator publishing contract', () => {
+  it('ships every referenced static asset and required DOM target', async () => {
+    const assets = ['index.html', 'app.js', 'styles.css', 'favicon.svg']
+    await Promise.all(assets.map(asset => access(join(siteRoot, asset))))
+
+    const html = await readFile(join(siteRoot, 'index.html'), 'utf8')
+    const requiredIds = [
+      'schema-input',
+      'status',
+      'tool-count',
+      'schema-bytes',
+      'lens-surface',
+      'reduction',
+      'current-summary',
+      'claim-boundary',
+      'analyze-button',
+      'sample-button',
+      'clear-button',
+      'copy-summary-button',
+      'copy-command-button',
+      'download-card-button',
+      'share-card',
+    ]
+
+    for (const id of requiredIds) {
+      expect(html).toMatch(new RegExp(`id=["']${id}["']`))
+    }
+
+    expect(html).toMatch(/<script\s+type=["']module["']\s+src=["']\.\/app\.js["']><\/script>/)
+    expect(html).toContain('only the measurement summary and claim boundary')
+    expect(html).not.toContain('includes the exact inputs')
+  })
+
+  it('keeps calculator execution local and avoids HTML injection sinks', async () => {
+    const source = await readFile(appPath, 'utf8')
+    const forbiddenBehaviors = [
+      /\bfetch\s*\(/,
+      /\bXMLHttpRequest\b/,
+      /\bWebSocket\b/,
+      /\bEventSource\b/,
+      /\bsendBeacon\s*\(/,
+      /\bFormData\b/,
+      /\.innerHTML\s*=/,
+      /\.outerHTML\s*=/,
+    ]
+
+    for (const behavior of forbiddenBehaviors) {
+      expect(source).not.toMatch(behavior)
+    }
+  })
+
+  it('measures the fixed 1,000-tool sample with exact UTF-8 byte math', async () => {
+    const site = await loadSiteModule()
+    const measurement = site.measurePayload(site.SAMPLE_TOOLS)
+
+    expect(measurement.toolCount).toBe(1_000)
+    expect(measurement.bytes).toBe(294_894)
+    expect(site.utf8Bytes(JSON.stringify(site.SAMPLE_TOOLS))).toBe(294_894)
+    expect(measurement.reductionPercent).toBeCloseTo(99.62223714283776, 12)
+    expect(site.reductionPercent(2_000, 1_000)).toBe(50)
+    expect(site.reductionPercent(1_000, 1_114)).toBe(0)
+  })
+
+  it('keeps every local README link and card benchmark source resolvable', async () => {
+    const site = await loadSiteModule()
+    expect(site.BENCHMARK_SOURCE_FILES).toEqual([
+      'benchmark/run.ts',
+      'benchmark/README.md',
+    ])
+
+    const readmePaths = ['README.md', 'README.zh-CN.md']
+    for (const readmePath of readmePaths) {
+      const markdown = await readFile(join(repositoryRoot, readmePath), 'utf8')
+      for (const target of localMarkdownTargets(markdown)) {
+        await expect(access(join(repositoryRoot, target))).resolves.toBeUndefined()
+      }
+    }
+
+    for (const sourceFile of site.BENCHMARK_SOURCE_FILES) {
+      await expect(access(join(repositoryRoot, sourceFile))).resolves.toBeUndefined()
+    }
+
+    const appSource = await readFile(appPath, 'utf8')
+    expect(appSource).toContain('Source: benchmark/run.ts + benchmark/README.md')
+    expect(appSource).not.toContain('benchmark.json and benchmark/README.md')
+  })
+
+  it('pins every Pages action to the reviewed immutable revision', async () => {
+    const workflow = await readFile(join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8')
+    expect(workflow).toContain('actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5')
+    expect(workflow).toContain('actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5')
+    expect(workflow).toContain('actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4')
+    expect(workflow).toContain('actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4')
+    expect(workflow).not.toMatch(/uses:\s+actions\/(?:checkout|configure-pages|upload-pages-artifact|deploy-pages)@v\d+/)
+  })
+})
