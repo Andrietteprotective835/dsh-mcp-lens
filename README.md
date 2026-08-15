@@ -25,13 +25,20 @@ Use MCP Lens if you have dozens to thousands of MCP tools, multiple servers, or 
 
 Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, and `pnpm` on `PATH`. The `dsh plugin` command delegates installation to pnpm.
 
-Install the prebuilt release into your Harness profile:
+Download and verify the prebuilt release, then install the local file into your Harness profile. Passing a redirected GitHub asset URL directly to pnpm can fail with `ERR_PNPM_MISSING_TARBALL_INTEGRITY` on some pnpm versions.
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
+curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.8.tgz \
+  https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
+printf '%s  %s\n' \
+  'a930b5166ffe1cf1de4032d69289de935c444c94cf01b2a5ca5ad58949b91fa0' \
+  'dsh-mcp-lens-0.1.0-rc.8.tgz' | shasum -a 256 -c -
+dsh plugin --profile web add ./dsh-mcp-lens-0.1.0-rc.8.tgz
 ```
 
-Installation takes one command. To make the plugin useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
+On Windows, download the same asset from the [rc.8 release](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8), verify it with `Get-FileHash -Algorithm SHA256`, and pass its local path to `dsh plugin add`.
+
+The three-command block downloads, verifies, and installs the plugin. To make it useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
 
 ```sh
 dsh --profile web --dump-config
