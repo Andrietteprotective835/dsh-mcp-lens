@@ -12,10 +12,12 @@ import {
   catalogToolFromRemote,
   catalogToolUtf8Bytes,
   emptyCatalog,
+  filterCatalog,
   loadCatalogCache,
   searchCatalog,
   serverFingerprint,
   writeCatalogCache,
+  type CatalogSearchResult,
   type CatalogTool,
 } from '../src/catalog.js'
 
@@ -55,6 +57,16 @@ async function temporaryCache(): Promise<{ directory: string; path: string }> {
   const directory = await mkdtemp(join(tmpdir(), 'dsh-mcp-lens-catalog-'))
   temporaryDirectories.push(directory)
   return { directory, path: join(directory, 'catalog.json') }
+}
+
+function fixedLatinToken(index: number): string {
+  let remaining = index
+  let encoded = ''
+  for (let position = 0; position < 6; position += 1) {
+    encoded = String.fromCharCode(97 + (remaining % 26)) + encoded
+    remaining = Math.floor(remaining / 26)
+  }
+  return `qq${encoded}q`
 }
 
 describe('weighted lexical search', () => {
@@ -214,6 +226,35 @@ describe('weighted lexical search', () => {
     expect(catalog.search('calendar')[0]?.matchedTerms).toEqual(['calendar'])
   })
 
+  it('keeps standard one-edit insertion, deletion, and substitution but rejects transposition', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [tool('calendar', 'Schedule a meeting')], 1)
+
+    expect(catalog.search('calenda')[0]?.tool.name).toBe('calendar')
+    expect(catalog.search('calendara')[0]?.tool.name).toBe('calendar')
+    expect(catalog.search('calender')[0]?.tool.name).toBe('calendar')
+    expect(catalog.search('calnedar')).toEqual([])
+    expect(catalog.search('calndr')).toEqual([])
+  })
+
+  it('fails typo fallback closed after the global name/title candidate-token cap', () => {
+    const title = Array.from({ length: 250_000 }, (_, index) => fixedLatinToken(index)).join(' ')
+    const snapshot = {
+      ...emptyCatalog(1),
+      servers: [{
+        name: 'fixture',
+        fingerprint,
+        fetchedAt: 1,
+        tools: [tool('calendar', 'Schedule a meeting', {}, { title })],
+      }],
+    }
+
+    expect(searchCatalog(snapshot, 'calendar')[0]?.tool.name).toBe('calendar')
+    // `calendar` is an early one-edit match for `calender`; the later title
+    // vocabulary still forces the whole fallback route to fail closed.
+    expect(searchCatalog(snapshot, 'calender')).toEqual([])
+  })
+
   it('bounds fallback to a single Latin OOV true edit in name/title', () => {
     const catalog = new ToolCatalog([configured('github', fingerprint)])
     catalog.replaceServerTools('github', fingerprint, [
@@ -289,6 +330,67 @@ describe('weighted lexical search', () => {
     expect(searchCatalog(snapshot, '\t  \n').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
     expect(searchCatalog(snapshot, '!!! ---').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
     expect(searchCatalog(snapshot, '\u200b').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
+  })
+
+  it('does not stale-cache a caller-owned mutable snapshot', () => {
+    const mutableTool = {
+      name: 'calendar_lookup',
+      description: 'Find a calendar record',
+      inputSchema: { type: 'object', properties: {} },
+    }
+    const mutableSnapshot = {
+      ...emptyCatalog(1),
+      servers: [{ name: 'fixture', fingerprint, fetchedAt: 1, tools: [mutableTool] }],
+    }
+    // Shallow envelope freezing is not enough to qualify caller-owned data for
+    // the immutable-generation cache.
+    Object.freeze(mutableSnapshot)
+
+    expect(searchCatalog(mutableSnapshot, 'calendar')[0]?.tool.name).toBe('calendar_lookup')
+    mutableTool.name = 'invoice_lookup'
+    mutableTool.description = 'Find an invoice record'
+    expect(searchCatalog(mutableSnapshot, 'calendar')).toEqual([])
+    expect(searchCatalog(mutableSnapshot, 'invoice')[0]?.tool.name).toBe('invoice_lookup')
+  })
+
+  it('reuses one frozen policy view and invalidates indexing with a new snapshot identity', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    const policy = Object.freeze({
+      allows: (server: string, name: string) => server === 'github' && !name.startsWith('blocked_'),
+    })
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('calendar_lookup', 'Find a calendar record'),
+      tool('blocked_delete', 'Delete a record'),
+    ], 1)
+    const firstSnapshot = catalog.snapshot()
+    const firstView = filterCatalog(firstSnapshot, policy)
+
+    expect(filterCatalog(firstSnapshot, policy)).toBe(firstView)
+    expect(Object.isFrozen(firstView)).toBe(true)
+    expect(Object.isFrozen(firstView.servers)).toBe(true)
+    expect(Object.isFrozen(firstView.servers[0]?.tools)).toBe(true)
+    expect(searchCatalog(firstView, 'calendar')[0]?.tool.name).toBe('calendar_lookup')
+
+    catalog.replaceServerTools('github', fingerprint, [tool('invoice_lookup', 'Find an invoice record')], 2)
+    const secondSnapshot = catalog.snapshot()
+    const secondView = filterCatalog(secondSnapshot, policy)
+    expect(secondSnapshot).not.toBe(firstSnapshot)
+    expect(secondView).not.toBe(firstView)
+    expect(searchCatalog(secondView, 'calendar')).toEqual([])
+    expect(searchCatalog(secondView, 'invoice')[0]?.tool.name).toBe('invoice_lookup')
+  })
+
+  it('keeps cached tokenless listings isolated from returned-array mutation', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('zeta', 'Last tool'),
+      tool('alpha', 'First tool'),
+    ], 1)
+
+    const first = catalog.search('') as CatalogSearchResult[]
+    expect(first.map(result => result.tool.name)).toEqual(['alpha', 'zeta'])
+    first.reverse()
+    expect(catalog.search('').map(result => result.tool.name)).toEqual(['alpha', 'zeta'])
   })
 })
 
