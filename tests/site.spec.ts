@@ -49,7 +49,8 @@ function localMarkdownTargets(markdown: string): string[] {
 
 const frozenPilotDate = '2026-08-14'
 const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334222997/ee14cb30-45a1-42fb-bb6b-e606ec8b3078'
-const lensReleaseCandidate = '0.1.0-rc.7'
+const lensReleaseCandidate = '0.1.0-rc.8'
+const schemaActionRelease = '0.1.0-rc.7'
 const harnessPilotVersion = '0.1.0-rc.6'
 const immutableCandidateRevision = 'f21169f921e7ed032a4db5062685afb6f948c2d1'
 
@@ -308,7 +309,7 @@ describe('catalog calculator publishing contract', () => {
     expect(styles).toContain('width: min(1040px, calc(100% - 20px));')
   })
 
-  it('identifies the Lens rc.7 candidate without rewriting rc.6 Harness dependencies or pilot history', async () => {
+  it('identifies the Lens rc.8 candidate without rewriting rc.6 Harness dependencies, pilot history, or the rc.7 Action', async () => {
     const [packageJson, shrinkwrap, englishReadme, chineseReadme, englishPilot, chinesePilot] = await Promise.all([
       readFile(join(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse),
       readFile(join(repositoryRoot, 'npm-shrinkwrap.json'), 'utf8').then(JSON.parse),
@@ -330,7 +331,7 @@ describe('catalog calculator publishing contract', () => {
 
     for (const readme of [englishReadme, chineseReadme]) {
       expect(readme).toContain(`/releases/download/v${lensReleaseCandidate}/dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
-      expect(readme).toContain(`labmimors/dsh-mcp-lens@v${lensReleaseCandidate}`)
+      expect(readme).toContain(`labmimors/dsh-mcp-lens@v${schemaActionRelease}`)
       expect(readme).toContain(`github:labmimors/dsh-mcp-lens#v${lensReleaseCandidate}`)
       expect(readme).toContain(`/releases/tag/v${lensReleaseCandidate}`)
       expect(readme).toContain(`labmimors/dsh-mcp-lens@${immutableCandidateRevision}`)

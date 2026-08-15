@@ -15,6 +15,7 @@ Why users install it:
 
 - Spend less on input-heavy turns: in the dated three-task pilot, estimated DeepSeek V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
 - Keep more room for the real task: the same pilot reduced `request/header.tools` JSON from `674,249 B` to `27,401 B`.
+- Retrieve more relevant covered calls: on a frozen MCP-Atlas-derived convenience holdout, Recall@5 rose from `0.062610` to `0.246656` across 304 untouched prompts. This is lexical retrieval evidence, not an official MCP-Atlas or end-to-end score.
 - Narrow the tool-choice surface: search reveals only a small ranked set of exact schemas, and the final `server/tool` is still gated by `allowTools` and `denyTools`.
 - Preserve completion in the tested pilot: both arms completed `3/3` tasks, while Lens used one extra search step.
 
@@ -27,7 +28,7 @@ Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, 
 Install the prebuilt release into your Harness profile:
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.7/dsh-mcp-lens-0.1.0-rc.7.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
 ```
 
 Installation takes one command. To make the plugin useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
@@ -77,7 +78,7 @@ The tarball is already built, so no dependency build permission is needed. The M
 <summary>Install reviewed source instead</summary>
 
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.7
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.8
 ```
 
 Git installs fetch source and run `prepare`. With pnpm 10+, add this exact package key to `$DSH_HOME/profiles/web/pnpm-workspace.yaml` (default `~/.dsh/profiles/web/pnpm-workspace.yaml`), then rerun the command:
@@ -178,6 +179,18 @@ Lens trades a search step on first use for a nearly constant standing MCP schema
 **Speed:** there is no universal latency win to claim. The first uncached use adds search and connection work; smaller requests may offset that cost on large catalogs, so measure your own workload.
 
 ## Measured results
+
+### Frozen retrieval holdout
+
+We evaluated the rc.8 ranker once on an **MCP-Atlas-derived convenience holdout**, not the official MCP-Atlas benchmark. It contains 15 real servers, 102 captured tool schemas, and 304 untouched prompts. The prompts exclude the earlier 15-query development set and 38-query holdout A; their exact-text overlap with this repository's 12-query regression fixture is zero.
+
+| Metric | Released rc.7 ranker | rc.8 candidate v3 | Difference |
+|---|---:|---:|---:|
+| Recall@5 | 0.062610 | 0.246656 | +0.184046 |
+| MRR | 0.119999 | 0.258684 | +0.138685 |
+| nDCG@5 | 0.051830 | 0.204307 | +0.152477 |
+
+The rc.7 runtime ranker is byte-identical to the rc.6 runtime baseline used by the evaluator. The Recall@5 difference has a 100,000-replicate paired-bootstrap 95% CI of `[0.144846, 0.224342]`; prompt-level wins/ties/losses are `99/197/8`. This result covers **covered-call lexical retrieval only**. It does not measure end-to-end task completion, tokens, cost, latency, semantic retrieval, or general product quality. See the [method, boundaries, and artifact commitments](docs/RETRIEVAL_EVALUATION.md).
 
 ### Live DeepSeek V4 Flash pilot
 
@@ -292,7 +305,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
 - Contributions: read [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.
-- Release: [`v0.1.0-rc.7`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.7).
+- Release: [`v0.1.0-rc.8`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8).
 
 DeepSeek Harness currently discovers community plugins through public GitHub repositories with the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic and installs them from GitHub, tarballs, or npm packages. See the official [plugin publishing guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.md).
 
