@@ -26,7 +26,7 @@ Use MCP Lens if you have dozens to thousands of MCP tools, multiple servers, or 
 
 Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, and `pnpm` on `PATH`. The `dsh plugin` command delegates installation to pnpm.
 
-The commands below are prepared for rc.9 and become valid after its Release page lists the `.tgz` asset and SHA-256 digest. Download the file, compare its digest with the value shown for that exact Release asset, and only then install the local file into your Harness profile. Passing a redirected GitHub asset URL directly to pnpm can fail with `ERR_PNPM_MISSING_TARBALL_INTEGRITY` on some pnpm versions.
+The rc.9 Release page lists the `.tgz` asset and its SHA-256 digest. Download the file, compare its digest with the value shown for that exact Release asset, and only then install the local file into your Harness profile. Passing a redirected GitHub asset URL directly to pnpm can fail with `ERR_PNPM_MISSING_TARBALL_INTEGRITY` on some pnpm versions.
 
 ```sh
 curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.9.tgz \
@@ -84,7 +84,7 @@ The Release asset is a prebuilt tarball, so it needs no dependency build permiss
 <details>
 <summary>Install reviewed source instead</summary>
 
-After the rc.9 tag is published:
+To install the reviewed rc.9 source tag instead:
 
 ```sh
 dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.9
@@ -322,7 +322,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
 - Contributions: read [`CONTRIBUTING.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.
-- Release candidate: [`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9) (the link resolves after publication).
+- Release candidate: [`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9).
 
 DeepSeek Harness currently discovers community plugins through public GitHub repositories with the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic and installs them from GitHub, tarballs, or npm packages. See the official [plugin publishing guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.md).
 

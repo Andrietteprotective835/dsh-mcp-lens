@@ -404,6 +404,15 @@ describe('catalog calculator publishing contract', () => {
       expect(readme).not.toContain('47285d39bf267d71d196ffaec7ca58a380204566')
     }
 
+    expect(englishReadme).toContain('The rc.9 Release page lists the `.tgz` asset')
+    expect(englishReadme).not.toContain('become valid after its Release page')
+    expect(englishReadme).not.toContain('After the rc.9 tag is published')
+    expect(englishReadme).not.toContain('the link resolves after publication')
+    expect(chineseReadme).toContain('rc.9 Release 页面已经列出 `.tgz` 附件')
+    expect(chineseReadme).not.toContain('下面的命令为 rc.9 预先准备')
+    expect(chineseReadme).not.toContain('rc.9 Tag 发布后')
+    expect(chineseReadme).not.toContain('发布后链接才会生效')
+
     expect(englishPilot).toContain(`DeepSeek Harness: \`${harnessPilotVersion}\``)
     expect(chinesePilot).toContain(`DeepSeek Harness：\`${harnessPilotVersion}\``)
     for (const retrieval of [englishRetrieval, chineseRetrieval]) {
@@ -433,6 +442,12 @@ describe('catalog calculator publishing contract', () => {
       expect(page).not.toContain(`dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v${lensReleaseCandidate}`)
       expect(page).not.toContain('/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz')
     }
+    expect(pages[0]).toContain('The rc.9 Release page lists both the <code>.tgz</code> asset')
+    expect(pages[0]).not.toContain('After the rc.9 Release page lists')
+    expect(pages[0]).not.toContain('In the rc.9 candidate')
+    expect(pages[1]).toContain('rc.9 Release 页面已经列出 <code>.tgz</code> 附件')
+    expect(pages[1]).not.toContain('rc.9 Release 页面同时列出 <code>.tgz</code> 附件和 SHA-256 摘要后')
+    expect(pages[1]).not.toContain('rc.9 Candidate 只为')
   })
 
   it('pins every Pages action to the reviewed immutable revision', async () => {
