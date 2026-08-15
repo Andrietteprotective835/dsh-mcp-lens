@@ -107,7 +107,7 @@ describe('catalog calculator publishing contract', () => {
     expect(html).toContain('<meta property="og:site_name" content="MCP Lens" />')
     expect(html).toContain('<meta property="og:locale" content="en_US" />')
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />')
-    expect(html).toContain('<meta name="twitter:title" content="MCP Lens Catalog Calculator" />')
+    expect(html).toContain('<meta name="twitter:title" content="DeepSeek Harness MCP Schema Calculator | MCP Lens" />')
     expect(html).toContain(`<meta property="og:image" content="${repositoryImageUrl}" />`)
     expect(html).toContain(`<meta name="twitter:image" content="${repositoryImageUrl}" />`)
     expect(html).toContain('"@type": "WebApplication"')
