@@ -15,8 +15,8 @@ Why users install it:
 
 - Spend less on input-heavy turns: in the dated three-task pilot, estimated DeepSeek V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
 - Keep more room for the real task: the same pilot reduced `request/header.tools` JSON from `674,249 B` to `27,401 B`.
-- Reduce tool-selection drift: the model sees exact schemas only for ranked matches, and the final `server/tool` is still gated by `allowTools` and `denyTools`.
-- Avoid the usual "compression hurts quality" trap: both arms completed `3/3` tested tasks in the live pilot.
+- Narrow the tool-choice surface: search reveals only a small ranked set of exact schemas, and the final `server/tool` is still gated by `allowTools` and `denyTools`.
+- Preserve completion in the tested pilot: both arms completed `3/3` tasks, while Lens used one extra search step.
 
 Use MCP Lens if you have dozens to thousands of MCP tools, multiple servers, or long-tail tools that are expensive to advertise on every turn. Skip it if you have only a handful of tools that are used almost every request.
 
@@ -204,7 +204,7 @@ The checked-in benchmark uses a real Harness `Context`, `SystemPrompt`, and `Too
 | 100 | 62,062 B | 1,114 B | 98.205% |
 | 1,000 | 647,962 B | 1,114 B | 99.828% |
 
-At 1,000 tools, the official client registers 1,000 remote schemas while Lens still registers two. On the frozen 12-query retrieval fixture, Lens measured Recall@1 / Recall@5 / MRR = `1.0 / 1.0 / 1.0`.
+At 1,000 tools, the official client registers 1,000 remote schemas while Lens still registers two. On the frozen 12-query retrieval fixture, Lens measured Recall@1 / Recall@5 / MRR = `1.0 / 1.0 / 1.0`. That fixture was authored for this repository, so treat it as a regression guard—not independent evidence of real-world retrieval quality.
 
 Reproduce the component result without an API key:
 
