@@ -95,6 +95,43 @@ interface ResolvedCatalogLimits {
   readonly maxBytesPerTool: number
 }
 
+const ENGLISH_STOPWORDS = new Set([
+  'a', 'about', 'after', 'again', 'all', 'also', 'am', 'an', 'and', 'any',
+  'are', 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'between',
+  'both', 'but', 'by', 'can', 'could', 'did', 'do', 'does', 'doing', 'each',
+  'few', 'for', 'from', 'further', 'had', 'has', 'have', 'having', 'he', 'her',
+  'here', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'i', 'if', 'in',
+  'into', 'is', 'it', 'its', 'itself', 'just', 'me', 'more', 'most', 'my',
+  'myself', 'no', 'nor', 'not', 'of', 'on', 'once', 'only', 'or', 'other',
+  'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'she', 'should',
+  'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs', 'them',
+  'themselves', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
+  'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were', 'what',
+  'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'will', 'with',
+  'would', 'you', 'your', 'yours', 'yourself', 'yourselves',
+])
+
+const EXACT_FIELD_IDF_PARAMS = {
+  maxDocumentFrequencyRatio: 0.72,
+  minimumLatinTermLength: 3,
+  coverageBonus: 0.12,
+  fields: {
+    name: { weight: 3.2, b: 0.08 },
+    title: { weight: 2.4, b: 0.15 },
+    schema: { weight: 1.15, b: 0.55 },
+    description: { weight: 0.9, b: 0.72 },
+    server: { weight: 1.9, b: 0.05 },
+  },
+  oneEdit: {
+    minimumLength: 5,
+    maximumLength: 64,
+  },
+} as const
+
+// Product integration guard outside the frozen ranker: once policy/server
+// filtering leaves at most two tools, retain exact-hit terms despite high DF.
+const SMALL_VISIBLE_CORPUS_MAX_DOCUMENTS = 2
+
 export class CatalogSnapshotTooLargeError extends RangeError {
   public readonly actualBytes: number
   public readonly maxBytes: number
@@ -207,13 +244,13 @@ export function emptyCatalog(revision = 0): CatalogSnapshot {
 }
 
 /**
- * Search an immutable snapshot using weighted lexical matching.
+ * Search an immutable snapshot using deterministic exact-field IDF ranking.
  *
- * Matching is OR-based (partial intent still retrieves candidates), then
- * ranked by exact phrase, field weight, token coverage, and corpus rarity.
- * Names, titles, descriptions, server names, and nested parameter names are
- * indexed. CamelCase, snake_case, kebab-case, plurals, and CJK bigrams are
- * normalized deterministically.
+ * The exact route uses canonical tokens, best-field scoring, corpus rarity,
+ * field-length normalization, and a bounded coverage bonus. Only when that
+ * route is empty may one eligible Latin OOV term use true edit-distance-one
+ * fallback against name/title tokens. Prefix, substring, transposition,
+ * description, and schema fuzzy matches are never used.
  */
 export function searchCatalog(
   snapshot: CatalogSnapshot,
@@ -228,9 +265,8 @@ export function searchCatalog(
     .flatMap(server => server.tools.map(tool => indexTool(server, tool)))
   if (documents.length === 0) return []
 
-  const queryPhrase = normalizeText(query)
-  const queryTerms = tokenize(query)
-  if (queryTerms.length === 0) {
+  const canonicalQueryTerms = tokenizeCanonical(query)
+  if (canonicalQueryTerms.length === 0) {
     return documents
       .sort(compareIndexedDocuments)
       .slice(0, limit)
@@ -243,51 +279,13 @@ export function searchCatalog(
       }))
   }
 
-  const documentFrequency = new Map<string, number>()
-  for (const term of queryTerms) {
-    let count = 0
-    for (const document of documents) {
-      if (document.fields.some(field => bestTokenMatch(term, field.tokens) > 0)) count += 1
-    }
-    documentFrequency.set(term, count)
-  }
+  const queryTerms = gateQueryTerms(canonicalQueryTerms, documents)
+  if (queryTerms.length === 0) return []
 
-  const ranked: CatalogSearchResult[] = []
-  for (const document of documents) {
-    let score = phraseScore(queryPhrase, document.fields)
-    const matchedTerms: string[] = []
-
-    for (const term of queryTerms) {
-      let best = 0
-      for (const field of document.fields) {
-        best = Math.max(best, field.weight * bestTokenMatch(term, field.tokens))
-      }
-      if (best === 0) continue
-      matchedTerms.push(term)
-      const frequency = documentFrequency.get(term) ?? 0
-      const inverseDocumentFrequency = 1 + Math.log((documents.length + 1) / (frequency + 1))
-      score += best * inverseDocumentFrequency
-    }
-
-    if (matchedTerms.length === 0) continue
-    const coverage = matchedTerms.length / queryTerms.length
-    score *= 1 + (coverage * 0.25)
-    ranked.push({
-      server: document.server,
-      fingerprint: document.fingerprint,
-      tool: document.tool,
-      score: roundScore(score),
-      matchedTerms,
-    })
-  }
-
-  ranked.sort((left, right) => {
-    if (left.score !== right.score) return right.score - left.score
-    const byServer = codePointCompare(left.server, right.server)
-    if (byServer !== 0) return byServer
-    return codePointCompare(left.tool.name, right.tool.name)
-  })
-  return ranked.slice(0, limit)
+  const exact = rankDocuments(documents, queryTerms, false)
+  if (exact.length > 0) return exact.slice(0, limit)
+  if (!fallbackEligible(queryTerms)) return []
+  return rankDocuments(documents, queryTerms, true).slice(0, limit)
 }
 
 /**
@@ -545,11 +543,12 @@ export class ToolCatalog {
   }
 }
 
+type SearchFieldKind = 'name' | 'title' | 'schema' | 'description' | 'server'
+
 interface SearchField {
-  readonly phrase: string
-  readonly tokens: readonly string[]
-  readonly weight: number
-  readonly phraseWeight: number
+  readonly kind: SearchFieldKind
+  readonly tokens: ReadonlySet<string>
+  readonly length: number
 }
 
 interface IndexedDocument {
@@ -571,64 +570,153 @@ function indexTool(server: CatalogServerSnapshot, tool: McpToolMetadata): Indexe
     fingerprint: server.fingerprint,
     tool,
     fields: [
-      makeField(tool.name, 9, 15),
-      makeField(title, 6, 9),
-      makeField(parameterText, 4.5, 6),
-      makeField(tool.description ?? '', 2.5, 4),
-      makeField(server.name, 1.5, 2),
+      makeField('name', tool.name),
+      makeField('title', title),
+      makeField('schema', parameterText),
+      makeField('description', tool.description ?? ''),
+      makeField('server', server.name),
     ],
   }
 }
 
-function makeField(value: string, weight: number, phraseWeight: number): SearchField {
-  return { phrase: normalizeText(value), tokens: tokenize(value), weight, phraseWeight }
+function makeField(kind: SearchFieldKind, value: string): SearchField {
+  const tokens = new Set(tokenizeCanonical(value))
+  return { kind, tokens, length: tokens.size }
 }
 
-function phraseScore(queryPhrase: string, fields: readonly SearchField[]): number {
-  if (queryPhrase.length < 2) return 0
-  let best = 0
-  for (const field of fields) {
-    if (field.phrase === queryPhrase) best = Math.max(best, field.phraseWeight * 1.5)
-    else if (field.phrase.includes(queryPhrase)) best = Math.max(best, field.phraseWeight)
-  }
-  return best
+interface GatedQueryTerm {
+  readonly term: string
+  readonly documentFrequency: number
 }
 
-function bestTokenMatch(query: string, candidates: readonly string[]): number {
-  let best = 0
-  for (const candidate of candidates) {
-    if (candidate === query) return 1
-    if (query.length >= 2 && (candidate.startsWith(query) || query.startsWith(candidate))) best = Math.max(best, 0.72)
-    if (query.length >= 3 && (candidate.includes(query) || query.includes(candidate))) best = Math.max(best, 0.48)
-    if (query.length >= 5 && candidate.length >= 5 && isOneEditApart(query, candidate)) best = Math.max(best, 0.3)
-  }
-  return best
+interface ScoringQueryTerm extends GatedQueryTerm {
+  readonly oneEditDocumentFrequency: number
 }
 
-function isOneEditApart(left: string, right: string): boolean {
-  if (Math.abs(left.length - right.length) > 1) return false
-  let short = left
-  let long = right
-  if (short.length > long.length) [short, long] = [long, short]
-  let shortIndex = 0
-  let longIndex = 0
-  let edits = 0
-  while (shortIndex < short.length && longIndex < long.length) {
-    if (short[shortIndex] === long[longIndex]) {
-      shortIndex += 1
-      longIndex += 1
-      continue
+function gateQueryTerms(
+  terms: readonly string[],
+  documents: readonly IndexedDocument[],
+): readonly GatedQueryTerm[] {
+  return [...new Set(terms)]
+    .filter(term => isCjkChunk(term) || (
+      term.length >= EXACT_FIELD_IDF_PARAMS.minimumLatinTermLength
+      && !ENGLISH_STOPWORDS.has(term)
+    ))
+    .map(term => ({ term, documentFrequency: exactDocumentFrequency(term, documents) }))
+    .filter(({ documentFrequency }) => documentFrequency === 0
+      || documents.length <= SMALL_VISIBLE_CORPUS_MAX_DOCUMENTS
+      || (documentFrequency / documents.length) <= EXACT_FIELD_IDF_PARAMS.maxDocumentFrequencyRatio)
+}
+
+function rankDocuments(
+  documents: readonly IndexedDocument[],
+  terms: readonly GatedQueryTerm[],
+  oneEditFallback: boolean,
+): CatalogSearchResult[] {
+  const scoringTerms: readonly ScoringQueryTerm[] = terms.map(term => ({
+    ...term,
+    oneEditDocumentFrequency: oneEditFallback
+      ? oneEditDocumentFrequency(term.term, documents)
+      : 0,
+  }))
+  const ranked: CatalogSearchResult[] = []
+  for (const document of documents) {
+    let total = 0
+    let matched = 0
+    const matchedTerms: string[] = []
+    for (const term of scoringTerms) {
+      const contribution = bestFieldContribution(document, term, oneEditFallback)
+      if (contribution.score === 0) continue
+      matched += 1
+      if (!contribution.usedOneEdit) matchedTerms.push(term.term)
+      const boundedDocumentFrequency = Math.max(1, contribution.effectiveDocumentFrequency)
+      const inverseDocumentFrequency = Math.log(
+        1 + ((documents.length - boundedDocumentFrequency + 0.5) / (boundedDocumentFrequency + 0.5)),
+      )
+      total += contribution.score * inverseDocumentFrequency
     }
-    edits += 1
-    if (edits > 1) return false
-    if (short.length === long.length) shortIndex += 1
-    longIndex += 1
+    if (matched === 0) continue
+    const score = total
+      * (1 + EXACT_FIELD_IDF_PARAMS.coverageBonus * (matched / terms.length))
+      / Math.sqrt(Math.max(1, terms.length))
+    ranked.push({
+      server: document.server,
+      fingerprint: document.fingerprint,
+      tool: document.tool,
+      score: roundScore(score),
+      // The public string[] has no match-kind discriminator. Keep this field
+      // exact-only rather than representing a one-edit fallback as exact.
+      matchedTerms,
+    })
   }
-  if (longIndex < long.length) edits += 1
-  return edits === 1
+  ranked.sort(compareSearchResults)
+  return ranked
 }
 
-function tokenize(value: string): readonly string[] {
+interface FieldContribution {
+  readonly score: number
+  readonly effectiveDocumentFrequency: number
+  readonly usedOneEdit: boolean
+}
+
+function bestFieldContribution(
+  document: IndexedDocument,
+  term: ScoringQueryTerm,
+  oneEditFallback: boolean,
+): FieldContribution {
+  let best = 0
+  let effectiveDocumentFrequency = 0
+  let usedOneEdit = false
+  for (const field of document.fields) {
+    const settings = EXACT_FIELD_IDF_PARAMS.fields[field.kind]
+    const lengthNormalization = 1 / (
+      1 + settings.b * Math.log2(1 + Math.max(0, field.length - 1))
+    )
+    if (field.tokens.has(term.term)) {
+      best = Math.max(best, settings.weight * lengthNormalization)
+      effectiveDocumentFrequency = term.documentFrequency
+      usedOneEdit = false
+    }
+    if (!oneEditFallback || (field.kind !== 'name' && field.kind !== 'title')) continue
+    for (const candidate of field.tokens) {
+      if (!isTrueOneEdit(term.term, candidate)) continue
+      const candidateScore = settings.weight * lengthNormalization
+      if (candidateScore <= best) continue
+      best = candidateScore
+      effectiveDocumentFrequency = term.oneEditDocumentFrequency
+      usedOneEdit = true
+    }
+  }
+  return { score: best, effectiveDocumentFrequency, usedOneEdit }
+}
+
+function fallbackEligible(terms: readonly GatedQueryTerm[]): boolean {
+  const only = terms[0]
+  return terms.length === 1
+    && only !== undefined
+    && only.documentFrequency === 0
+    && eligibleLatinTerm(only.term)
+}
+
+function exactDocumentFrequency(term: string, documents: readonly IndexedDocument[]): number {
+  let count = 0
+  for (const document of documents) {
+    if (document.fields.some(field => field.tokens.has(term))) count += 1
+  }
+  return count
+}
+
+function oneEditDocumentFrequency(term: string, documents: readonly IndexedDocument[]): number {
+  if (!eligibleLatinTerm(term)) return 0
+  let count = 0
+  for (const document of documents) {
+    if (document.fields.some(field => (field.kind === 'name' || field.kind === 'title')
+      && [...field.tokens].some(candidate => isTrueOneEdit(term, candidate)))) count += 1
+  }
+  return count
+}
+
+function tokenizeCanonical(value: string): readonly string[] {
   const separated = value
     .normalize('NFKC')
     .replace(/([\p{Ll}\d])([\p{Lu}])/gu, '$1 $2')
@@ -646,16 +734,14 @@ function tokenize(value: string): readonly string[] {
       }
       continue
     }
-    terms.add(chunk)
-    const stem = simpleStem(chunk)
-    if (stem !== chunk) terms.add(stem)
+    terms.add(canonicalStem(chunk))
   }
   return [...terms]
 }
 
-function simpleStem(term: string): string {
+function canonicalStem(term: string): string {
   if (term.length > 4 && term.endsWith('ies')) return `${term.slice(0, -3)}y`
-  if (term.length > 4 && term.endsWith('es')) return term.slice(0, -2)
+  if (term.length > 4 && /(?:[sxz]|ch|sh)es$/u.test(term)) return term.slice(0, -2)
   if (term.length > 3 && term.endsWith('s') && !term.endsWith('ss')) return term.slice(0, -1)
   return term
 }
@@ -664,14 +750,41 @@ function isCjkChunk(value: string): boolean {
   return /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]+$/u.test(value)
 }
 
-function normalizeText(value: string): string {
-  return value
-    .normalize('NFKC')
-    .replace(/([\p{Ll}\d])([\p{Lu}])/gu, '$1 $2')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-    .replace(/\s+/g, ' ')
+function eligibleLatinTerm(term: string): boolean {
+  return term.length >= EXACT_FIELD_IDF_PARAMS.oneEdit.minimumLength
+    && term.length <= EXACT_FIELD_IDF_PARAMS.oneEdit.maximumLength
+    && /^[a-z]+$/u.test(term)
+}
+
+function isTrueOneEdit(left: string, right: string): boolean {
+  if (!eligibleLatinTerm(left) || !eligibleLatinTerm(right)) return false
+  if (Math.abs(left.length - right.length) > 1 || left === right) return false
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+  for (let row = 1; row <= left.length; row += 1) {
+    const current = [row]
+    let rowMinimum = row
+    for (let column = 1; column <= right.length; column += 1) {
+      const substitution = (previous[column - 1] ?? 0)
+        + (left[row - 1] === right[column - 1] ? 0 : 1)
+      const value = Math.min(
+        (previous[column] ?? 0) + 1,
+        (current[column - 1] ?? 0) + 1,
+        substitution,
+      )
+      current.push(value)
+      rowMinimum = Math.min(rowMinimum, value)
+    }
+    if (rowMinimum > 1) return false
+    previous = current
+  }
+  return previous[right.length] === 1
+}
+
+function compareSearchResults(left: CatalogSearchResult, right: CatalogSearchResult): number {
+  if (left.score !== right.score) return right.score - left.score
+  const byServer = codePointCompare(left.server, right.server)
+  if (byServer !== 0) return byServer
+  return codePointCompare(left.tool.name, right.tool.name)
 }
 
 function collectSchemaText(schema: JsonObject): readonly string[] {
