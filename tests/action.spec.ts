@@ -25,8 +25,20 @@ interface ActionModule {
   extractTools(value: unknown): readonly unknown[]
   measurePayload(value: unknown): Measurement
   parsePayload(raw: string | Uint8Array): unknown
+  buildShareHash(measurement: Measurement): string
+  buildShareMarkdown(measurement: Measurement): string
+  buildShareUrl(measurement: Measurement): string
+  parseShareHash(hash: string): Readonly<{ toolCount: number, bytes: number }> | null
   buildOutputs(measurement: Measurement): Readonly<Record<string, string>>
   buildStepSummary(measurement: Measurement, budgets?: { maxTools?: number, maxSchemaBytes?: number }): string
+}
+
+function parseActionOutputs(body: string): Record<string, string> {
+  return Object.fromEntries(body.trim().split('\n').map((line) => {
+    const separator = line.indexOf('=')
+    if (separator < 1) throw new Error(`Malformed action output line: ${line}`)
+    return [line.slice(0, separator), line.slice(separator + 1)]
+  }))
 }
 
 async function loadActionModule(): Promise<ActionModule> {
@@ -57,10 +69,12 @@ describe('GitHub Action schema audit', () => {
     expect(metadata).toContain('lens-tool-count:')
     expect(metadata).toContain('lens-schema-bytes:')
     expect(metadata).toContain('schema-byte-reduction-percent:')
+    expect(metadata).toContain('share-url:')
+    expect(metadata).toContain('share-markdown:')
 
     expect(source).toMatch(/from "node:fs\/promises"/)
     expect(source).toMatch(/from "node:path"/)
-    expect(source).not.toMatch(/from ["'](?!node:)/)
+    expect(source).not.toMatch(/from ["'](?!node:|\.\.\/site\/share-metrics\.js)/)
     expect(source).not.toMatch(/node:(?:http|https|net|tls|dns|dgram)/)
     expect(source).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|sendBeacon)\b/)
     expect(source).not.toMatch(/\b(?:exec|execFile|spawn|fork|eval)\s*\(/)
@@ -77,12 +91,14 @@ describe('GitHub Action schema audit', () => {
     const arrayMeasurement = action.measurePayload(site.SAMPLE_TOOLS)
     const wrappedMeasurement = action.measurePayload({ tools: site.SAMPLE_TOOLS })
     const schemasMeasurement = action.measurePayload({ schemas: site.SAMPLE_TOOLS })
+    const headerMeasurement = action.measurePayload({ header: { tools: site.SAMPLE_TOOLS } })
     const recordedMeasurement = action.measurePayload({ request: { header: { tools: site.SAMPLE_TOOLS } } })
     const siteMeasurement = site.measurePayload(site.SAMPLE_TOOLS)
 
     expect(action.LENS_SURFACE).toEqual({ tools: 2, bytes: 1_114 })
     expect(arrayMeasurement).toEqual(wrappedMeasurement)
     expect(arrayMeasurement).toEqual(schemasMeasurement)
+    expect(arrayMeasurement).toEqual(headerMeasurement)
     expect(arrayMeasurement).toEqual(recordedMeasurement)
     expect(arrayMeasurement.toolCount).toBe(1_000)
     expect(arrayMeasurement.bytes).toBe(294_894)
@@ -93,7 +109,46 @@ describe('GitHub Action schema audit', () => {
       'lens-tool-count': '2',
       'lens-schema-bytes': '1114',
       'schema-byte-reduction-percent': '99.622',
+      'share-url': action.buildShareUrl(arrayMeasurement),
+      'share-markdown': action.buildShareMarkdown(arrayMeasurement),
     })
+    expect(action.parseShareHash(action.buildShareHash(arrayMeasurement))).toEqual({
+      toolCount: 1_000,
+      bytes: 294_894,
+    })
+  })
+
+  it('rejects share checksum mismatches and keeps aggregate sharing schema-free', async () => {
+    const action = await loadActionModule()
+    const measurement = { toolCount: 3, bytes: 2_000, reductionPercent: 44.3 }
+    const enrichedMeasurement = { ...measurement, raw: 'PRIVATE_FIXTURE' } as Measurement
+    const hash = action.buildShareHash(enrichedMeasurement)
+    const url = action.buildShareUrl(enrichedMeasurement)
+    const markdown = action.buildShareMarkdown(enrichedMeasurement)
+
+    expect(action.parseShareHash(hash)).toEqual({ toolCount: 3, bytes: 2_000 })
+    expect(action.parseShareHash(hash.replace('bytes=2000', 'bytes=2001'))).toBeNull()
+    expect(action.parseShareHash(`${hash}&raw=PRIVATE_FIXTURE`)).toBeNull()
+    expect(url).toMatch(/^https:\/\/labmimors\.github\.io\/dsh-mcp-lens\/#v=1&tools=3&bytes=2000&check=\d+$/)
+    expect(markdown).toContain('Self-reported local measurement:')
+    for (const value of [hash, url, markdown]) {
+      expect(value).not.toContain('PRIVATE_FIXTURE')
+      expect(value).not.toContain('name')
+      expect(value).not.toContain('description')
+      expect(value).not.toContain('inputSchema')
+    }
+
+    expect(action.buildOutputs({ ...measurement, reductionPercent: Number.NaN })['schema-byte-reduction-percent']).toBe('44.300')
+    for (const invalid of [
+      { toolCount: Number.NaN, bytes: 2_000, reductionPercent: 0 },
+      { toolCount: -1, bytes: 2_000, reductionPercent: 0 },
+      { toolCount: Number.MAX_SAFE_INTEGER, bytes: 2_000, reductionPercent: 0 },
+      { toolCount: 3, bytes: Number.NaN, reductionPercent: 0 },
+      { toolCount: 3, bytes: -1, reductionPercent: 0 },
+      { toolCount: 3, bytes: action.MAX_TOOLS_FILE_BYTES + 1, reductionPercent: 0 },
+    ]) {
+      expect(() => action.buildOutputs(invalid)).toThrow()
+    }
   })
 
   it('measures canonical JSON UTF-8 bytes, including non-ASCII tool data', async () => {
@@ -114,7 +169,7 @@ describe('GitHub Action schema audit', () => {
 
     expect(() => action.parsePayload('{not-json')).toThrow('valid UTF-8 JSON')
     expect(() => action.parsePayload(Uint8Array.from([0xff, 0xfe, 0xfd]))).toThrow('valid UTF-8 JSON')
-    for (const payload of [null, {}, { tools: null }, { schemas: null }, { header: { tools: [] } }, 'tools']) {
+    for (const payload of [null, {}, { tools: null }, { schemas: null }, { header: { tools: null } }, 'tools']) {
       expect(() => action.extractTools(payload)).toThrow('request.header.tools array')
     }
 
@@ -143,7 +198,7 @@ describe('GitHub Action schema audit', () => {
     expect(summary).toContain('Budget result: **FAIL**')
   })
 
-  it('writes only numeric outputs and a schema-free step summary', async () => {
+  it('writes numeric metrics, schema-free share outputs, and a schema-free step summary', async () => {
     await withTemporaryDirectory(async (workspace) => {
       const fileName = 'tools;$(touch injected)\n.json'
       const payload = {
@@ -174,17 +229,26 @@ describe('GitHub Action schema audit', () => {
 
       expect(result.stdout).toBe('')
       expect(result.stderr).toBe('')
-      expect(await readFile(outputFile, 'utf8')).toMatch(
-        /^tool-count=2\nschema-bytes=\d+\nlens-tool-count=2\nlens-schema-bytes=1114\nschema-byte-reduction-percent=0\.000\n$/,
-      )
+      const output = parseActionOutputs(await readFile(outputFile, 'utf8'))
+      expect(output['tool-count']).toBe('2')
+      expect(output['schema-bytes']).toMatch(/^\d+$/)
+      expect(output['lens-tool-count']).toBe('2')
+      expect(output['lens-schema-bytes']).toBe('1114')
+      expect(output['schema-byte-reduction-percent']).toBe('0.000')
+      expect(output['share-url']).toMatch(/^https:\/\/labmimors\.github\.io\/dsh-mcp-lens\/#v=1&tools=2&bytes=\d+&check=\d+$/)
+      expect(output['share-markdown']).toContain('Self-reported local measurement:')
+      expect(output['share-markdown']).toContain(output['share-url'])
 
       const summary = await readFile(summaryFile, 'utf8')
       expect(summary).toContain('Canonical `JSON.stringify(tools)` UTF-8 bytes')
       expect(summary).toContain('| Fixed MCP Lens benchmark | 2 | 1,114 B |')
       expect(summary).toContain('Schema bytes only')
-      expect(summary).not.toContain('DO_NOT_LEAK')
-      expect(summary).not.toContain('private-schema-value')
-      expect(summary).not.toContain('secret')
+      expect(summary).toContain('[open this self-reported local measurement](')
+      for (const body of [JSON.stringify(output), summary]) {
+        expect(body).not.toContain('DO_NOT_LEAK')
+        expect(body).not.toContain('private-schema-value')
+        expect(body).not.toContain('secret')
+      }
       await expect(access(join(workspace, 'injected'))).rejects.toThrow()
     })
   })

@@ -96,7 +96,7 @@
           <p class="hint">
             Accepted shapes: an array of tool objects, or an object with
             <code>tools</code>, <code>schemas</code>, or
-            <code>request.header.tools</code>.
+            <code>header.tools</code> / <code>request.header.tools</code>.
           </p>
         </div>
 
@@ -137,7 +137,8 @@
             </div>
           </div>
           <div class="toolbar toolbar-wrap">
-            <button class="button button-secondary" id="copy-summary-button" type="button">Copy summary</button>
+            <button class="button button-secondary" id="copy-share-link-button" type="button">Copy share link</button>
+            <button class="button button-secondary" id="copy-markdown-button" type="button">Copy Markdown</button>
             <button class="button button-secondary" id="copy-command-button" type="button">Copy repro command</button>
             <button class="button button-secondary" id="download-card-button" type="button">Download card</button>
           </div>
@@ -148,8 +149,9 @@
         <div class="panel-header">
           <h2>Shareable card preview</h2>
           <p>
-            The exported card contains only the measurement summary and claim boundary;
-            it never includes the schemas you pasted.
+            Share links, Markdown, and exported cards contain only bounded numeric fields
+            and a fixed self-reported label; they never include the schemas you pasted.
+            The numeric check catches accidental edits—it is not a signature or proof that a measurement occurred.
           </p>
         </div>
         <canvas id="share-card" width="1600" height="900" aria-label="Shareable result card preview"></canvas>
@@ -162,6 +164,7 @@
             <li>Exact UTF-8 bytes of canonical <code>JSON.stringify(...)</code> output in your browser.</li>
             <li>Detected model-visible tool count in the pasted payload.</li>
             <li>Difference versus MCP Lens's checked-in component benchmark at 1,000 tools: 2 tools and 1,114 bytes.</li>
+            <li>A schema-free URL fragment that can reconstruct the self-reported result with an empty textarea.</li>
           </ul>
         </article>
         <article class="panel-block prose">
@@ -169,6 +172,7 @@
           <ul>
             <li>Schema bytes are not tokenizer tokens, provider bills, latency, or task quality.</li>
             <li>The live V4 Flash pilot in the repository is a separate three-task measurement with explicit dates and caveats.</li>
+            <li>Shared values are self-reported. Their numeric check is not authentication or independent verification.</li>
             <li>This page never uploads your schemas; share only what you are comfortable publishing.</li>
           </ul>
         </article>

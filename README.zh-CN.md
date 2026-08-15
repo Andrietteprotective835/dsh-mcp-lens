@@ -27,7 +27,7 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 把预编译 Release 安装到 Harness Profile：
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.7/dsh-mcp-lens-0.1.0-rc.7.tgz
 ```
 
 安装只需要这一条命令。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
@@ -39,17 +39,17 @@ dsh --profile web
 
 完成后像平常一样提问即可，不需要在 Prompt 里手动写 `mcp_search` 或 `mcp_call`。
 
-可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并生成可分享的对比卡片。如果希望把它变成可重复的 CI 约束，可以用 [Schema 预算 Action](#在-ci-里阻止-schema-失控增长)，在工具数量或 Schema 字节超过上限时让 Workflow 失败。
+可以直接试试[本地目录测量页](https://labmimors.github.io/dsh-mcp-lens/)：把你当前的工具 Schema 粘进去，浏览器会本地计算准确 UTF-8 bytes，并可复制不含 Schema 的分享链接或 Markdown。分享结果固定标注为**用户自报的本地测量（self-reported local measurement）**，URL 只编码有边界的数字字段，不包含工具名、描述或 Schema。数字校验只能发现意外修改，不是签名，也不能证明测量真实发生过。如果希望把它变成可重复的 CI 约束，可以用 [Schema 预算 Action](#在-ci-里阻止-schema-失控增长)，在工具数量或 Schema 字节超过上限时让 Workflow 失败。
 
 如果你想把同样的测量放进 CI，这个仓库也附带了一个零依赖 GitHub Action：读取仓库内的工具 JSON，输出模型可见工具数、标准 Schema 字节数，以及相对 Lens 固定两工具面的字节降幅。
 
 ```yaml
-- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.6
+- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.7
   with:
     tools-file: fixtures/request-header-tools.json
 ```
 
-生产环境如需不可变引用，请固定到已审核的 rc.6 Commit：`51cd0ec8d953576507a404cb06034842914b5b5c`。
+生产环境如需不可变引用，请固定到已审核的 rc.7 Commit：`f21169f921e7ed032a4db5062685afb6f948c2d1`。
 
 <p align="center">
   <img src="assets/mcp-lens-comparison.zh-CN.svg" alt="DeepSeek Harness 实测对比：两侧都完成三项任务，MCP Lens 大幅减少模型可见工具、请求工具 JSON 和预估 API 成本" width="100%">
@@ -77,7 +77,7 @@ dsh --profile web
 <summary>改为安装已审核的源码</summary>
 
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.6
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.7
 ```
 
 Git 安装会下载源码并运行 `prepare`。使用 pnpm 10+ 时，请在 `$DSH_HOME/profiles/web/pnpm-workspace.yaml`（默认 `~/.dsh/profiles/web/pnpm-workspace.yaml`）中加入准确包名，然后重新安装：
@@ -218,9 +218,9 @@ npm run bench -- --output benchmark.json
 
 ## 在 CI 里阻止 Schema 失控增长
 
-零依赖的 **MCP Lens Schema Audit** GitHub Action 会在 Runner 内测量导出的模型可见工具载荷。它不发网络请求，只写数字 Output，也不会把工具名称、描述或 Schema 复制到 Step Summary。配置预算后，意外扩大的工具面会直接让检查失败。
+零依赖的 **MCP Lens Schema Audit** GitHub Action 会在 Runner 内测量导出的模型可见工具载荷。它不发网络请求，除数字指标外只输出不含 Schema 的 `share-url` / `share-markdown`，也不会把工具名称、描述或 Schema 复制到 Step Summary。配置预算后，意外扩大的工具面会直接让检查失败。
 
-支持的 JSON 形式包括工具数组、`{ "tools": [...] }`、`{ "schemas": [...] }`，以及记录的 `{ "request": { "header": { "tools": [...] } } }`。
+支持的 JSON 形式包括工具数组、`{ "tools": [...] }`、`{ "schemas": [...] }`、`{ "header": { "tools": [...] } }`，以及记录的 `{ "request": { "header": { "tools": [...] } } }`。
 
 ```yaml
 name: MCP schema budget
@@ -234,7 +234,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: labmimors/dsh-mcp-lens@6a7e006fd63887fecf2ce1e70a54af26e0df1378
+      - uses: labmimors/dsh-mcp-lens@f21169f921e7ed032a4db5062685afb6f948c2d1
         with:
           tools-file: artifacts/request-header.json
           max-tools: 100
@@ -292,7 +292,7 @@ MCP Lens 不是沙箱：stdio Server 仍会在宿主机执行，HTTP Server 仍�
 - 安全问题：阅读 [`SECURITY.md`](SECURITY.md)，不要在公开 Issue 中披露未修复漏洞。
 - 参与贡献：阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 - 搜索质量：[提交脱敏后的搜索 Miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)，帮助把真实失败转成回归 Fixture。
-- 当前 Release：[`v0.1.0-rc.6`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.6)。
+- 当前 Release：[`v0.1.0-rc.7`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.7)。
 
 DeepSeek Harness 当前通过带有 [`dsh-plugin`](https://github.com/topics/dsh-plugin) Topic 的公开 GitHub 仓库发现社区插件，并支持从 GitHub、tarball 或 npm 包安装。详见官方[插件发布教程](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md)。
 

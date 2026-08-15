@@ -27,7 +27,7 @@ Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, 
 Install the prebuilt release into your Harness profile:
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.7/dsh-mcp-lens-0.1.0-rc.7.tgz
 ```
 
 Installation takes one command. To make the plugin useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
@@ -39,17 +39,17 @@ dsh --profile web
 
 After that, prompt Harness normally. You do not need to mention `mcp_search` or `mcp_call` in your prompt.
 
-Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes in the browser and generate a shareable comparison card. Prefer a repeatable CI guard? Use the [schema budget Action](#keep-schema-drift-out-of-ci) to fail a workflow when tool count or schema bytes drift above your limit.
+Try the [local-only catalog calculator](https://labmimors.github.io/dsh-mcp-lens/) to measure your current tool-schema bytes, then copy a schema-free share link or Markdown result. Shared results are always labeled **self-reported local measurements** and encode only bounded numeric fields—not tool names, descriptions, or schemas. The numeric check catches accidental edits; it is not a signature or proof that a measurement occurred. Prefer a repeatable CI guard? Use the [schema budget Action](#keep-schema-drift-out-of-ci) to fail a workflow when tool count or schema bytes drift above your limit.
 
 Need the same measurement in CI? This repository also ships a dependency-free GitHub Action that audits a checked-in tool payload and reports the model-facing tool count, canonical schema bytes, and byte reduction versus the fixed two-tool Lens surface.
 
 ```yaml
-- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.6
+- uses: labmimors/dsh-mcp-lens@v0.1.0-rc.7
   with:
     tools-file: fixtures/request-header-tools.json
 ```
 
-For an immutable production reference, pin the reviewed rc.6 commit: `51cd0ec8d953576507a404cb06034842914b5b5c`.
+For an immutable production reference, pin the reviewed rc.7 commit: `f21169f921e7ed032a4db5062685afb6f948c2d1`.
 
 <p align="center">
   <img src="assets/mcp-lens-comparison.svg" alt="Live DeepSeek Harness comparison: MCP Lens reduced model-visible tools, request tool JSON, and estimated API cost while both arms completed three of three tasks" width="100%">
@@ -77,7 +77,7 @@ The tarball is already built, so no dependency build permission is needed. The M
 <summary>Install reviewed source instead</summary>
 
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.6
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.7
 ```
 
 Git installs fetch source and run `prepare`. With pnpm 10+, add this exact package key to `$DSH_HOME/profiles/web/pnpm-workspace.yaml` (default `~/.dsh/profiles/web/pnpm-workspace.yaml`), then rerun the command:
@@ -218,9 +218,9 @@ The exact metric, fixture, dependency versions, source digest, and measurement l
 
 ## Keep schema drift out of CI
 
-The dependency-free **MCP Lens Schema Audit** GitHub Action measures an exported model-facing tool payload inside the runner. It makes no network request, writes only numeric outputs, and never copies tool names, descriptions, or schemas into the Step Summary. Optional budgets turn an unexpected schema expansion into a failing check.
+The dependency-free **MCP Lens Schema Audit** GitHub Action measures an exported model-facing tool payload inside the runner. It makes no network request, writes numeric metrics plus schema-free `share-url` / `share-markdown` outputs, and never copies tool names, descriptions, or schemas into the Step Summary. Optional budgets turn an unexpected schema expansion into a failing check.
 
-Accepted JSON shapes are a tool array, `{ "tools": [...] }`, `{ "schemas": [...] }`, or a recorded `{ "request": { "header": { "tools": [...] } } }` payload.
+Accepted JSON shapes are a tool array, `{ "tools": [...] }`, `{ "schemas": [...] }`, `{ "header": { "tools": [...] } }`, or a recorded `{ "request": { "header": { "tools": [...] } } }` payload.
 
 ```yaml
 name: MCP schema budget
@@ -234,7 +234,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: labmimors/dsh-mcp-lens@6a7e006fd63887fecf2ce1e70a54af26e0df1378
+      - uses: labmimors/dsh-mcp-lens@f21169f921e7ed032a4db5062685afb6f948c2d1
         with:
           tools-file: artifacts/request-header.json
           max-tools: 100
@@ -292,7 +292,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
 - Contributions: read [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.
-- Release: [`v0.1.0-rc.6`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.6).
+- Release: [`v0.1.0-rc.7`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.7).
 
 DeepSeek Harness currently discovers community plugins through public GitHub repositories with the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic and installs them from GitHub, tarballs, or npm packages. See the official [plugin publishing guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.md).
 

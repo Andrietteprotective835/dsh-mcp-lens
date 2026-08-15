@@ -1,11 +1,19 @@
+import {
+  LENS_SURFACE as SHARED_LENS_SURFACE,
+  buildShareHash,
+  buildShareMarkdown,
+  buildShareUrl,
+  parseShareHash,
+  reductionPercent as sharedReductionPercent,
+} from "./share-metrics.js"
+
 export const BENCHMARK_SOURCE_FILES = Object.freeze([
   "benchmark/run.ts",
   "benchmark/README.md",
 ])
 
 export const LENS_SURFACE = Object.freeze({
-  tools: 2,
-  bytes: 1114,
+  ...SHARED_LENS_SURFACE,
   source:
     "MCP Lens checked-in component benchmark at 1,000 advertised remote tools; implementation and method: benchmark/run.ts + benchmark/README.md",
   sourceFiles: BENCHMARK_SOURCE_FILES,
@@ -27,7 +35,7 @@ export const SAMPLE_TOOLS = Object.freeze(Array.from({ length: 1000 }, (_, index
 
 let elements
 let context
-let currentResult = createResult([], "No payload yet.")
+let currentResult = createResult("No payload yet.")
 
 if (typeof document !== "undefined") initializePage()
 
@@ -44,13 +52,15 @@ function initializePage() {
     analyzeButton: document.getElementById("analyze-button"),
     sampleButton: document.getElementById("sample-button"),
     clearButton: document.getElementById("clear-button"),
-    copySummaryButton: document.getElementById("copy-summary-button"),
+    copyShareLinkButton: document.getElementById("copy-share-link-button"),
+    copyMarkdownButton: document.getElementById("copy-markdown-button"),
     copyCommandButton: document.getElementById("copy-command-button"),
     downloadCardButton: document.getElementById("download-card-button"),
     canvas: document.getElementById("share-card"),
   }
 
   context = elements.canvas.getContext("2d")
+  elements.input.value = ""
   elements.lensSurface.textContent = `${LENS_SURFACE.tools} tools / ${formatBytes(LENS_SURFACE.bytes)}`
 
   elements.analyzeButton.addEventListener("click", () => analyzeInput(elements.input.value))
@@ -60,13 +70,19 @@ function initializePage() {
   })
   elements.clearButton.addEventListener("click", () => {
     elements.input.value = ""
-    currentResult = createResult([], "Cleared.")
+    clearShareHash()
+    currentResult = createResult("Cleared.")
     renderResult()
   })
-  elements.copySummaryButton.addEventListener("click", async () => {
-    if (!currentResult.summary) return
-    await navigator.clipboard.writeText(currentResult.summary)
-    setStatus("Copied summary to clipboard.")
+  elements.copyShareLinkButton.addEventListener("click", async () => {
+    if (!currentResult.shareUrl) return
+    await navigator.clipboard.writeText(currentResult.shareUrl)
+    setStatus("Copied a schema-free share link. The result is labeled self-reported.")
+  })
+  elements.copyMarkdownButton.addEventListener("click", async () => {
+    if (!currentResult.shareMarkdown) return
+    await navigator.clipboard.writeText(currentResult.shareMarkdown)
+    setStatus("Copied schema-free Markdown labeled as a self-reported local measurement.")
   })
   elements.copyCommandButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(buildReproCommand())
@@ -74,12 +90,23 @@ function initializePage() {
   })
   elements.downloadCardButton.addEventListener("click", () => downloadCard())
 
-  analyzeInput("")
+  const sharedMeasurement = parseShareHash(window.location.hash)
+  if (sharedMeasurement) {
+    currentResult = createMeasuredResult(
+      sharedMeasurement,
+      "Loaded a self-reported local measurement from the URL. The link contains no tool schemas.",
+    )
+    renderResult()
+  } else {
+    if (window.location.hash) clearShareHash()
+    analyzeInput("")
+  }
 }
 
 function analyzeInput(raw) {
   if (!raw.trim()) {
-    currentResult = createResult([], "Paste JSON to compute your current schema surface locally.")
+    clearShareHash()
+    currentResult = createResult("Paste JSON to compute your current schema surface locally.")
     renderResult()
     return
   }
@@ -87,22 +114,14 @@ function analyzeInput(raw) {
   try {
     const parsed = JSON.parse(raw)
     const measurement = measurePayload(parsed)
-    const tools = measurement.tools
-    const bytes = measurement.bytes
-    currentResult = createResult(tools, `${tools.length} tools parsed locally. Exact UTF-8 bytes measured in your browser.`)
-    currentResult.bytes = bytes
-    currentResult.currentSummary = `${formatInteger(tools.length)} tools / ${formatBytes(bytes)}`
-    currentResult.reductionPercent = measurement.reductionPercent
-    currentResult.summary = [
-      `Current model-visible MCP surface: ${formatInteger(tools.length)} tools / ${formatBytes(bytes)}.`,
-      `MCP Lens component benchmark surface: ${LENS_SURFACE.tools} tools / ${formatBytes(LENS_SURFACE.bytes)}.`,
-      `Schema-byte reduction versus this payload: ${formatPercent(currentResult.reductionPercent)}.`,
-      `Measured locally in the browser with canonical JSON.stringify UTF-8 bytes.`,
-      `Repo: https://github.com/labmimors/dsh-mcp-lens`,
-    ].join(" ")
-    currentResult.claimBoundary = "Schema bytes only; not tokens, billing, latency, or task quality."
+    currentResult = createMeasuredResult(
+      measurement,
+      `${measurement.toolCount} tools parsed locally. Exact UTF-8 bytes measured in your browser.`,
+    )
+    window.history.replaceState(null, "", buildShareHash(measurement))
   } catch (error) {
-    currentResult = createResult([], `Could not parse the payload: ${error.message}`)
+    clearShareHash()
+    currentResult = createResult(`Could not parse the payload: ${error.message}`)
     currentResult.claimBoundary = "Paste valid JSON first."
   }
 
@@ -120,7 +139,7 @@ export function extractTools(value) {
     if (value.header && Array.isArray(value.header.tools)) return value.header.tools
   }
 
-  throw new Error("Expected an array, {tools:[...]}, {schemas:[...]}, or {request:{header:{tools:[...]}}}.")
+  throw new Error("Expected an array, {tools:[...]}, {schemas:[...]}, {header:{tools:[...]}}, or {request:{header:{tools:[...]}}}.")
 }
 
 export function measurePayload(value) {
@@ -128,27 +147,40 @@ export function measurePayload(value) {
   const bytes = utf8Bytes(JSON.stringify(tools))
 
   return {
-    tools,
     toolCount: tools.length,
     bytes,
     reductionPercent: reductionPercent(bytes, LENS_SURFACE.bytes),
   }
 }
 
-function createResult(tools, status) {
+function createResult(status) {
   return {
-    tools,
+    toolCount: 0,
     bytes: 0,
     reductionPercent: 0,
     currentSummary: "0 tools / 0 B",
-    summary: "",
+    shareUrl: "",
+    shareMarkdown: "",
     claimBoundary: "Schema bytes only",
     status,
   }
 }
 
+function createMeasuredResult(measurement, status) {
+  return {
+    toolCount: measurement.toolCount,
+    bytes: measurement.bytes,
+    reductionPercent: reductionPercent(measurement.bytes, LENS_SURFACE.bytes),
+    currentSummary: `${formatInteger(measurement.toolCount)} tools / ${formatBytes(measurement.bytes)}`,
+    shareUrl: buildShareUrl(measurement),
+    shareMarkdown: buildShareMarkdown(measurement),
+    claimBoundary: "Self-reported local measurement. Schema bytes only; not tokens, billing, latency, or task quality.",
+    status,
+  }
+}
+
 function renderResult() {
-  elements.toolCount.textContent = formatInteger(currentResult.tools.length)
+  elements.toolCount.textContent = formatInteger(currentResult.toolCount)
   elements.schemaBytes.textContent = formatBytes(currentResult.bytes)
   elements.reduction.textContent = formatPercent(currentResult.reductionPercent)
   elements.currentSummary.textContent = currentResult.currentSummary
@@ -180,7 +212,7 @@ function renderCard() {
 
   ctx.fillStyle = "#0c7c59"
   ctx.font = "700 30px IBM Plex Sans, sans-serif"
-  ctx.fillText("MCP Lens local calculator", 80, 84)
+  ctx.fillText("MCP Lens · self-reported local measurement", 80, 84)
 
   ctx.fillStyle = "#1a1712"
   ctx.font = "700 78px Iowan Old Style, Palatino Linotype, serif"
@@ -284,8 +316,7 @@ function formatBytes(bytes) {
 }
 
 export function reductionPercent(currentBytes, lensBytes) {
-  if (currentBytes <= 0 || currentBytes <= lensBytes) return 0
-  return ((currentBytes - lensBytes) / currentBytes) * 100
+  return sharedReductionPercent(currentBytes, lensBytes)
 }
 
 function formatPercent(value) {
@@ -311,4 +342,9 @@ function downloadCard() {
   link.download = "mcp-lens-local-calculation.png"
   link.click()
   setStatus("Downloaded the shareable card.")
+}
+
+function clearShareHash() {
+  if (typeof window === "undefined" || !window.location.hash) return
+  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`)
 }
