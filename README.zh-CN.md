@@ -15,6 +15,7 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 
 - 更省输入成本：在带日期的三任务实测里，DeepSeek V4 Flash 预估费用从 `$0.0307204` 降到 `$0.0034707`。
 - 更少占上下文：同一组实测里，`request/header.tools` JSON 从 `674,249 B` 降到 `27,401 B`。
+- 更容易找回相关的已覆盖调用：在冻结的 MCP-Atlas 衍生便利 Holdout 上，304 个未触碰 Prompt 的 Recall@5 从 `0.062610` 提升到 `0.246656`。这只是词法检索证据，不是 MCP-Atlas 官方分数或端到端成绩。
 - 缩小模型的选工具范围：搜索只揭示少量排序候选的准确 Schema，最终 `server/tool` 仍然受 `allowTools` / `denyTools` 限制。
 - 在已测任务里保持完成率：真模型实测两侧都完成 `3/3`，Lens 多用了一次搜索步骤。
 
@@ -27,7 +28,7 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 把预编译 Release 安装到 Harness Profile：
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.7/dsh-mcp-lens-0.1.0-rc.7.tgz
+dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
 ```
 
 安装只需要这一条命令。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
@@ -77,7 +78,7 @@ dsh --profile web
 <summary>改为安装已审核的源码</summary>
 
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.7
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.8
 ```
 
 Git 安装会下载源码并运行 `prepare`。使用 pnpm 10+ 时，请在 `$DSH_HOME/profiles/web/pnpm-workspace.yaml`（默认 `~/.dsh/profiles/web/pnpm-workspace.yaml`）中加入准确包名，然后重新安装：
@@ -178,6 +179,18 @@ Lens 用首次使用时的一次搜索，换取接近恒定的常驻 MCP Schema 
 **速度：**目前没有可以普遍承诺的延迟提升。首次未缓存使用会增加搜索和连接工作；大型工具库的较小请求可能抵消这部分开销，请以自己的工作负载实测。
 
 ## 实测结果
+
+### 冻结检索 Holdout
+
+我们把 rc.8 排序器一次性评测在一个 **MCP-Atlas 衍生的便利 Holdout** 上；它不是 MCP-Atlas 官方 Benchmark。该集合包含 15 个真实 Server、102 份实际捕获的工具 Schema 和 304 个未触碰 Prompt。Prompt 排除了先前的 15 条开发集和 38 条 Holdout A；与本仓库 12 查询回归 Fixture 的准确文本交集为零。
+
+| 指标 | 已发布 rc.7 排序器 | rc.8 candidate v3 | 差值 |
+|---|---:|---:|---:|
+| Recall@5 | 0.062610 | 0.246656 | +0.184046 |
+| MRR | 0.119999 | 0.258684 | +0.138685 |
+| nDCG@5 | 0.051830 | 0.204307 | +0.152477 |
+
+rc.7 的 Runtime 排序器与评测所用 rc.6 Runtime Baseline 逐字节相同。Recall@5 差值在 100,000 次 paired bootstrap 下的 95% CI 为 `[0.144846, 0.224342]`，逐 Prompt 胜／平／负为 `99/197/8`。这个结果只覆盖 **covered-call 词法检索**，不测量端到端任务完成、Token、费用、延迟、语义检索或通用产品质量。方法、边界和工件摘要见[中文检索评测报告](docs/RETRIEVAL_EVALUATION.zh-CN.md)。
 
 ### DeepSeek V4 Flash 真模型实测
 
@@ -292,7 +305,7 @@ MCP Lens 不是沙箱：stdio Server 仍会在宿主机执行，HTTP Server 仍�
 - 安全问题：阅读 [`SECURITY.md`](SECURITY.md)，不要在公开 Issue 中披露未修复漏洞。
 - 参与贡献：阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 - 搜索质量：[提交脱敏后的搜索 Miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)，帮助把真实失败转成回归 Fixture。
-- 当前 Release：[`v0.1.0-rc.7`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.7)。
+- 当前 Release：[`v0.1.0-rc.8`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8)。
 
 DeepSeek Harness 当前通过带有 [`dsh-plugin`](https://github.com/topics/dsh-plugin) Topic 的公开 GitHub 仓库发现社区插件，并支持从 GitHub、tarball 或 npm 包安装。详见官方[插件发布教程](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md)。
 

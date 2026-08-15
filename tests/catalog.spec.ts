@@ -97,7 +97,7 @@ describe('weighted lexical search', () => {
     expect(catalog.search('merged pull request metrics', { limit: 1 })[0]?.tool.name).toBe('pull-request-metrics')
   })
 
-  it('retrieves on partial intent instead of requiring every query token as a substring', () => {
+  it('uses exact canonical terms without requiring every query term to match', () => {
     const results = populatedCatalog().search('urgent create pull request')
 
     expect(results[0]?.tool.name).toBe('createPullRequest')
@@ -112,6 +112,167 @@ describe('weighted lexical search', () => {
     expect(results[0]?.matchedTerms.length).toBeGreaterThan(1)
   })
 
+  it('returns no ranking when stopword, short-token, or high-DF gating removes every term', () => {
+    const catalog = populatedCatalog()
+    expect(catalog.search('the and of to with')).toEqual([])
+    expect(catalog.search('io x 7')).toEqual([])
+
+    const commonFingerprint = serverFingerprint({ name: 'common', transport: 'stdio', command: 'common' })
+    const commonCatalog = new ToolCatalog([configured('common', commonFingerprint)])
+    commonCatalog.replaceServerTools('common', commonFingerprint, Array.from(
+      { length: 10 },
+      (_, index) => tool(`tool_${index}`, 'Lookup a record'),
+    ), 1)
+    expect(commonCatalog.search('lookup')).toEqual([])
+  })
+
+  it('does not let a verbose distractor outrank exact name-field evidence', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('generic_process', `${'local fyles project calculate metadata '.repeat(120)} generic processing`),
+      tool('read_local_files', 'Read local files'),
+    ], 1)
+
+    expect(catalog.search('Please read local files, then calculate project metadata.')[0]?.tool.name)
+      .toBe('read_local_files')
+  })
+
+  it('keeps long compound rankings deterministic and bounded', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('read_text_file', 'Read the complete contents of a local file'),
+      tool('execute_code', 'Execute code to calculate aggregate values'),
+      tool('process_request', `${'request project data values result '.repeat(200)}`),
+    ], 1)
+    const query = `${'Please review the request and project background. '.repeat(100)} Read my local file; then execute code to calculate totals.`
+
+    const first = catalog.search(query)
+    const second = catalog.search(query)
+    expect(first).toEqual(second)
+    expect(first.slice(0, 2).map(result => result.tool.name).sort()).toEqual([
+      'execute_code',
+      'read_text_file',
+    ])
+  })
+
+  it('reports matchedTerms only for gated canonical terms with an exact document hit', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('read_file', 'Read a local file'),
+      tool('write_record', 'Write a remote record'),
+    ], 1)
+
+    const [result] = catalog.search('read fyles urgent')
+    expect(result?.tool.name).toBe('read_file')
+    expect(result?.matchedTerms).toEqual(['read'])
+  })
+
+  it('builds document frequency after applying the server filter', () => {
+    const sharedFingerprint = serverFingerprint({ name: 'shared', transport: 'stdio', command: 'shared' })
+    const otherServers = Array.from({ length: 8 }, (_, index) => ({
+      name: `other-${index}`,
+      fingerprint: sharedFingerprint,
+      fetchedAt: 1,
+      tools: [tool(`write_${index}`, 'Write a record')],
+    }))
+    const snapshot = {
+      ...emptyCatalog(2),
+      servers: [
+        {
+          name: 'target',
+          fingerprint: sharedFingerprint,
+          fetchedAt: 1,
+          tools: [
+            tool('lookup_one', 'Lookup one'),
+            tool('lookup_two', 'Lookup two'),
+            tool('lookup_three', 'Lookup three'),
+          ],
+        },
+        ...otherServers,
+      ],
+    }
+
+    expect(searchCatalog(snapshot, 'lookup').map(result => result.server))
+      .toEqual(['target', 'target', 'target'])
+    expect(searchCatalog(snapshot, 'lookup', { server: 'target' })).toEqual([])
+  })
+
+  it('uses one eligible Latin OOV typo as name/title fallback only after exact ranking is empty', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('create_event', 'Schedule a meeting', {}, { title: 'Create calendar event' }),
+      tool('lookup_customer_by_email', 'Find a CRM record', {}, { title: 'Customer lookup' }),
+      tool('send_mail', 'Send a message'),
+    ], 1)
+
+    const calendar = catalog.search('calender')
+    const customer = catalog.search('custmer')
+    expect(calendar[0]?.tool.name).toBe('create_event')
+    expect(customer[0]?.tool.name).toBe('lookup_customer_by_email')
+    expect(calendar[0]?.matchedTerms).toEqual([])
+    expect(customer[0]?.matchedTerms).toEqual([])
+    expect(catalog.search('calendar')[0]?.matchedTerms).toEqual(['calendar'])
+  })
+
+  it('bounds fallback to a single Latin OOV true edit in name/title', () => {
+    const catalog = new ToolCatalog([configured('github', fingerprint)])
+    catalog.replaceServerTools('github', fingerprint, [
+      tool('calendar_create_event', 'Schedule a meeting', {
+        calendaring: { type: 'string' },
+      }, { title: 'Create event' }),
+      tool('generic_process', 'Process customer records', {
+        customer: { type: 'string' },
+      }, { title: 'Generic process' }),
+      tool('send_mail', 'Send a message'),
+    ], 1)
+
+    expect(catalog.search('calender custmer')).toEqual([])
+    expect(catalog.search('clnd')).toEqual([])
+    expect(catalog.search('calnedar')).toEqual([])
+    expect(catalog.search('calen')).toEqual([])
+    expect(catalog.search('custmer')).toEqual([])
+    expect(catalog.search('工單檢詢')).toEqual([])
+
+    const boundaryCatalog = new ToolCatalog([configured('github', fingerprint)])
+    const maximumLengthName = `${'a'.repeat(63)}b`
+    boundaryCatalog.replaceServerTools('github', fingerprint, [
+      tool(maximumLengthName, 'Boundary candidate'),
+      tool('send_mail', 'Send a message'),
+      tool('write_record', 'Write a record'),
+    ], 1)
+    expect(boundaryCatalog.search('a'.repeat(64))[0]?.tool.name).toBe(maximumLengthName)
+    expect(boundaryCatalog.search('a'.repeat(65))).toEqual([])
+  })
+
+  it('preserves exact usability for one/two-tool visible corpora without admitting unrelated queries', () => {
+    const oneTool = {
+      ...emptyCatalog(1),
+      servers: [{
+        name: 'fixture',
+        fingerprint,
+        fetchedAt: 1,
+        tools: [tool('github_list_pull_requests', 'List pull requests')],
+      }],
+    }
+    const twoTools = {
+      ...emptyCatalog(1),
+      servers: [{
+        name: 'fixture',
+        fingerprint,
+        fetchedAt: 1,
+        tools: [
+          tool('github_list_pull_requests', 'List pull requests'),
+          tool('github_create_issue', 'Create an issue'),
+        ],
+      }],
+    }
+
+    expect(searchCatalog(oneTool, 'github pull requests')[0]?.tool.name).toBe('github_list_pull_requests')
+    expect(searchCatalog(twoTools, 'github pull requests')[0]?.tool.name).toBe('github_list_pull_requests')
+    expect(searchCatalog(oneTool, 'unrelated')).toEqual([])
+    expect(searchCatalog(twoTools, 'unrelated')).toEqual([])
+  })
+
   it('uses a stable server/name tie-break and supports deterministic empty-query listing', () => {
     const sameFingerprint = serverFingerprint({ name: 'shared', transport: 'stdio', command: 'same' })
     const snapshot = {
@@ -119,11 +280,15 @@ describe('weighted lexical search', () => {
       servers: [
         { name: 'beta', fingerprint: sameFingerprint, fetchedAt: 1, tools: [tool('echo', 'Echo a value')] },
         { name: 'alpha', fingerprint: sameFingerprint, fetchedAt: 1, tools: [tool('echo', 'Echo a value')] },
+        { name: 'gamma', fingerprint: sameFingerprint, fetchedAt: 1, tools: [tool('write', 'Write a value')] },
       ],
     }
 
     expect(searchCatalog(snapshot, 'echo').map(result => result.server)).toEqual(['alpha', 'beta'])
-    expect(searchCatalog(snapshot, '').map(result => result.server)).toEqual(['alpha', 'beta'])
+    expect(searchCatalog(snapshot, '').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
+    expect(searchCatalog(snapshot, '\t  \n').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
+    expect(searchCatalog(snapshot, '!!! ---').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
+    expect(searchCatalog(snapshot, '\u200b').map(result => result.server)).toEqual(['alpha', 'beta', 'gamma'])
   })
 })
 
