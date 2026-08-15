@@ -66,3 +66,27 @@ be used to claim a performance advantage. They are descriptive smoke
 measurements only; process startup, JIT, filesystem cache, and host load remain
 uncontrolled. The seven warm-call samples do not repair that experimental
 limitation.
+
+## Search-index cache benchmark
+
+`search-cache.ts` isolates the rc.9 immutable-snapshot search-index cache with
+a fixed, keyless 10,000-tool synthetic catalog and one fixed query. It measures
+12 first searches against fresh snapshot identities (`cold`) and 60 searches
+after one unmeasured priming search on the same identity (`warm`):
+
+```sh
+npx tsx benchmark/search-cache.ts \
+  --output ../../artifacts/packages/mcp-lens-search-cache-rc9-candidate.json
+```
+
+The versioned JSON records Node and machine characteristics, Git commit and
+repository-wide dirty state, a path-sorted source digest, catalog tool count/UTF-8 bytes/digest,
+the fixed query, iteration counts, raw samples, median, and nearest-rank p95.
+Every measured result must byte-match an uncached caller-owned snapshot result;
+any semantic mismatch or source drift fails the run before a report is written.
+An existing output path is never replaced.
+
+Catalog construction is outside the timer. `cold` means a fresh immutable
+snapshot identity, not a cold process, filesystem, or CPU. The runner has no
+time-based pass threshold: these are host-specific component timings, not a
+universal speedup, provider-cost, or model-quality claim.
