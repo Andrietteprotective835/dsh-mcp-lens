@@ -11,6 +11,8 @@
 
 MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个远端工具。它不会在每轮请求中塞入全部工具 Schema，而是只在真正需要工具时，为少量排序候选揭示准确 Schema。
 
+如果它帮你管住了大型 MCP 工具库，欢迎[给仓库点个 Star](https://github.com/labmimors/dsh-mcp-lens)，让更多 DeepSeek Harness 用户找到它。
+
 用户最关心的四件事：
 
 - 更省输入成本：在带日期的三任务实测里，DeepSeek V4 Flash 预估费用从 `$0.0307204` 降到 `$0.0034707`。

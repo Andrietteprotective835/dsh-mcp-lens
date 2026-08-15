@@ -11,6 +11,8 @@ English | [简体中文](README.zh-CN.md)
 
 MCP Lens lets DeepSeek Harness search and call 1,000 remote tools through two stable model-facing interfaces. Instead of sending every tool schema on every turn, it reveals exact schemas only for a small ranked set when a tool is actually needed.
 
+If this keeps a large MCP catalog manageable for you, [star the repository](https://github.com/labmimors/dsh-mcp-lens) so more DeepSeek Harness users can find it.
+
 Why users install it:
 
 - Spend less on input-heavy turns: in the dated three-task pilot, estimated DeepSeek V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
