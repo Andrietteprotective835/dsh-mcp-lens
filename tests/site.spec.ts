@@ -47,6 +47,14 @@ function localMarkdownTargets(markdown: string): string[] {
     .map(target => decodeURIComponent(target.split('#', 1)[0] ?? ''))
 }
 
+function packageManifestIncludes(files: readonly string[], target: string): boolean {
+  const normalizedTarget = target.replace(/^\.\//, '')
+  return files.some(entry => {
+    const normalizedEntry = entry.replace(/^\.\//, '').replace(/\/+$/, '')
+    return normalizedTarget === normalizedEntry || normalizedTarget.startsWith(`${normalizedEntry}/`)
+  })
+}
+
 const frozenPilotDate = '2026-08-14'
 const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334222997/ee14cb30-45a1-42fb-bb6b-e606ec8b3078'
 const lensReleaseCandidate = '0.1.0-rc.9'
@@ -238,6 +246,25 @@ describe('catalog calculator publishing contract', () => {
     expect(appSource).not.toContain('benchmark.json and benchmark/README.md')
   })
 
+  it('keeps every packed README local link inside the declared package surface', async () => {
+    const [packageJson, english, chinese] = await Promise.all([
+      readFile(join(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse) as Promise<{ files: string[] }>,
+      readFile(join(repositoryRoot, 'README.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'README.zh-CN.md'), 'utf8'),
+    ])
+    const tagRoot = `https://github.com/labmimors/dsh-mcp-lens/blob/v${lensReleaseCandidate}`
+
+    expect(english).toContain(`${tagRoot}/docs/RETRIEVAL_EVALUATION.md`)
+    expect(chinese).toContain(`${tagRoot}/docs/RETRIEVAL_EVALUATION.zh-CN.md`)
+    for (const readme of [english, chinese]) {
+      expect(readme).toContain(`${tagRoot}/benchmark/README.md`)
+      expect(readme).toContain(`${tagRoot}/CONTRIBUTING.md`)
+      for (const target of localMarkdownTargets(readme)) {
+        expect(packageManifestIncludes(packageJson.files, target), target).toBe(true)
+      }
+    }
+  })
+
   it('publishes bilingual, crawlable study pages with the frozen pilot boundary', async () => {
     const englishPath = join(siteRoot, '1000-tool-tax', 'index.html')
     const chinesePath = join(siteRoot, 'zh-CN', '1000-tool-tax', 'index.html')
@@ -364,7 +391,7 @@ describe('catalog calculator publishing contract', () => {
       expect(readme).toContain(`labmimors/dsh-mcp-lens@${immutableCandidateRevision}`)
       expect(readme).toContain(`\`${immutableCandidateRevision}\``)
       expect(readme).toContain('304/304')
-      expect(readme).toContain('97/97')
+      expect(readme).toContain('98/98')
       expect(readme).toMatch(/[Ff]rozen search index|冻结搜索索引/)
       expect(readme).toMatch(/full source checkout|完整源码 Checkout/)
       expect(readme).toMatch(/compact prebuilt runtime package|精简的预编译 Runtime 包/)

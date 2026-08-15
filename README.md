@@ -192,7 +192,7 @@ Lens trades a search step on first use for a nearly constant standing MCP schema
 - Search tokenizes and sorts each Lens-owned, deeply frozen visible catalog once, then reuses that in-memory index for repeated queries under the same frozen policy. A refresh creates a new snapshot identity and therefore a new index; caller-owned mutable snapshots are never identity-cached.
 - The one-edit typo fallback now uses a linear-time exactly-one-edit check and fails closed after 250,000 name/title candidate tokens, bounding its only vocabulary-scan route.
 - A label-free replay against the frozen public Holdout B inputs matched the sealed rc.8 candidate rankings and per-result scores for all `304/304` prompts over 102 tools. That replay read no private labels, aggregate score output, or score receipt; it verifies ranking parity, not a new evaluation result.
-- The full source checkout passes `97/97` automated tests, typechecking, and build. The compact runtime package intentionally excludes the test and benchmark runners.
+- The full source checkout passes `98/98` automated tests, typechecking, and build. The compact runtime package intentionally excludes the test and benchmark runners.
 
 ## Measured results
 
@@ -206,7 +206,7 @@ We evaluated the rc.8 ranker once on an **MCP-Atlas-derived convenience holdout*
 | MRR | 0.119999 | 0.258684 | +0.138685 |
 | nDCG@5 | 0.051830 | 0.204307 | +0.152477 |
 
-The rc.7 runtime ranker is byte-identical to the rc.6 runtime baseline used by the evaluator. The Recall@5 difference has a 100,000-replicate paired-bootstrap 95% CI of `[0.144846, 0.224342]`; prompt-level wins/ties/losses are `99/197/8`. The rc.9 search-index change reproduced the frozen candidate's public rankings and per-result scores for `304/304` prompts without reading private labels, aggregate score output, or score receipt. This result covers **covered-call lexical retrieval only**. It does not measure end-to-end task completion, tokens, cost, latency, semantic retrieval, or general product quality. See the [method, boundaries, and artifact commitments](docs/RETRIEVAL_EVALUATION.md).
+The rc.7 runtime ranker is byte-identical to the rc.6 runtime baseline used by the evaluator. The Recall@5 difference has a 100,000-replicate paired-bootstrap 95% CI of `[0.144846, 0.224342]`; prompt-level wins/ties/losses are `99/197/8`. The rc.9 search-index change reproduced the frozen candidate's public rankings and per-result scores for `304/304` prompts without reading private labels, aggregate score output, or score receipt. This result covers **covered-call lexical retrieval only**. It does not measure end-to-end task completion, tokens, cost, latency, semantic retrieval, or general product quality. See the [method, boundaries, and artifact commitments](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/docs/RETRIEVAL_EVALUATION.md).
 
 ### Live DeepSeek V4 Flash pilot
 
@@ -243,7 +243,7 @@ npm run verify
 npm run bench -- --output benchmark.json
 ```
 
-These are source-checkout scripts. The compact prebuilt runtime package deliberately excludes `scripts/`, tests, benchmark sources, and build configuration; unpacking the `.tgz` is not a supported way to run `npm run verify` or `npm run bench`. The exact metric, fixture, dependency versions, source digest, and measurement limits are in [`benchmark/README.md`](benchmark/README.md).
+These are source-checkout scripts. The compact prebuilt runtime package deliberately excludes `scripts/`, tests, benchmark sources, and build configuration; unpacking the `.tgz` is not a supported way to run `npm run verify` or `npm run bench`. The exact metric, fixture, dependency versions, source digest, and measurement limits are in [`benchmark/README.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/benchmark/README.md).
 
 ## Keep schema drift out of CI
 
@@ -320,7 +320,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 - Privacy and data handling: [`PRIVACY.md`](PRIVACY.md).
 - Support and response targets: [`SUPPORT.md`](SUPPORT.md).
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
-- Contributions: read [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- Contributions: read [`CONTRIBUTING.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.
 - Release candidate: [`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9) (the link resolves after publication).
 

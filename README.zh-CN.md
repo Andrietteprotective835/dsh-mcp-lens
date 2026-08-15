@@ -192,7 +192,7 @@ Lens 用首次使用时的一次搜索，换取接近恒定的常驻 MCP Schema 
 - 搜索只为每个 Lens 自有、深度冻结的可见目录构建一次分词与排序索引；相同冻结策略下的后续查询直接复用。目录刷新会产生新的 Snapshot 身份并重建索引；调用方持有的可变 Snapshot 永远不会进入身份缓存。
 - edit-distance-one 拼写容错改为线性时间的准确单编辑检查，并在扫描 250,000 个名称／标题候选 Token 后 fail-closed，为唯一的词表扫描路径设置上限。
 - 一次无标签重放在冻结的公开 Holdout B 输入上，对 102 个工具的 `304/304` 个 Prompt 全部复现 sealed rc.8 candidate 的 Ranking 与逐结果 Score。该重放没有读取私有标签、聚合 Score 输出或 Score Receipt；它证明排序一致，不是一次新的评测。
-- 完整源码 Checkout 已通过 `97/97` 个自动化测试、类型检查与构建；精简 Runtime 包刻意不携带测试和 Benchmark Runner。
+- 完整源码 Checkout 已通过 `98/98` 个自动化测试、类型检查与构建；精简 Runtime 包刻意不携带测试和 Benchmark Runner。
 
 ## 实测结果
 
@@ -206,7 +206,7 @@ Lens 用首次使用时的一次搜索，换取接近恒定的常驻 MCP Schema 
 | MRR | 0.119999 | 0.258684 | +0.138685 |
 | nDCG@5 | 0.051830 | 0.204307 | +0.152477 |
 
-rc.7 的 Runtime 排序器与评测所用 rc.6 Runtime Baseline 逐字节相同。Recall@5 差值在 100,000 次 paired bootstrap 下的 95% CI 为 `[0.144846, 0.224342]`，逐 Prompt 胜／平／负为 `99/197/8`。rc.9 的搜索索引改动在不读取私有标签、聚合 Score 输出或 Score Receipt 的前提下，复现了冻结 Candidate 在 `304/304` 个 Prompt 上的公开 Ranking 与逐结果 Score。这个结果只覆盖 **covered-call 词法检索**，不测量端到端任务完成、Token、费用、延迟、语义检索或通用产品质量。方法、边界和工件摘要见[中文检索评测报告](docs/RETRIEVAL_EVALUATION.zh-CN.md)。
+rc.7 的 Runtime 排序器与评测所用 rc.6 Runtime Baseline 逐字节相同。Recall@5 差值在 100,000 次 paired bootstrap 下的 95% CI 为 `[0.144846, 0.224342]`，逐 Prompt 胜／平／负为 `99/197/8`。rc.9 的搜索索引改动在不读取私有标签、聚合 Score 输出或 Score Receipt 的前提下，复现了冻结 Candidate 在 `304/304` 个 Prompt 上的公开 Ranking 与逐结果 Score。这个结果只覆盖 **covered-call 词法检索**，不测量端到端任务完成、Token、费用、延迟、语义检索或通用产品质量。方法、边界和工件摘要见[中文检索评测报告](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/docs/RETRIEVAL_EVALUATION.zh-CN.md)。
 
 ### DeepSeek V4 Flash 真模型实测
 
@@ -243,7 +243,7 @@ npm run verify
 npm run bench -- --output benchmark.json
 ```
 
-这些命令只面向完整源码 Checkout。精简的预编译 Runtime 包会刻意排除 `scripts/`、测试、Benchmark 源码与构建配置；解包 `.tgz` 后运行 `npm run verify` 或 `npm run bench` 不属于支持契约。准确指标、Fixture、依赖版本、源码摘要和测量限制见 [`benchmark/README.md`](benchmark/README.md)。
+这些命令只面向完整源码 Checkout。精简的预编译 Runtime 包会刻意排除 `scripts/`、测试、Benchmark 源码与构建配置；解包 `.tgz` 后运行 `npm run verify` 或 `npm run bench` 不属于支持契约。准确指标、Fixture、依赖版本、源码摘要和测量限制见 [`benchmark/README.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/benchmark/README.md)。
 
 ## 在 CI 里阻止 Schema 失控增长
 
@@ -320,7 +320,7 @@ MCP Lens 不是沙箱：stdio Server 仍会在宿主机执行，HTTP Server 仍�
 - 隐私与数据边界：[`PRIVACY.md`](PRIVACY.md)。
 - 支持渠道与响应目标：[`SUPPORT.md`](SUPPORT.md)。
 - 安全问题：阅读 [`SECURITY.md`](SECURITY.md)，不要在公开 Issue 中披露未修复漏洞。
-- 参与贡献：阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+- 参与贡献：阅读 [`CONTRIBUTING.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/CONTRIBUTING.md)。
 - 搜索质量：[提交脱敏后的搜索 Miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)，帮助把真实失败转成回归 Fixture。
 - Release Candidate：[`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9)（发布后链接才会生效）。
 
