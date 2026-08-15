@@ -22,6 +22,8 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 
 如果你有几十到几千个 MCP 工具、多个 Server，或者很多长尾能力不值得每轮都暴露给模型，这个插件适合你。只有几个固定工具、而且几乎每轮都会用到时，直接客户端通常更简单。
 
+<a id="install"></a>
+
 ## 安装 rc.9
 
 前置要求：DeepSeek Harness `0.1.0-rc.6`、Node.js `^22.19.0` 或 `>=24.0.0`，并且 `pnpm` 已在 `PATH` 中。`dsh plugin` 会把安装交给 pnpm 执行。

@@ -22,6 +22,8 @@ Why users install it:
 
 Use MCP Lens if you have dozens to thousands of MCP tools, multiple servers, or long-tail tools that are expensive to advertise on every turn. Skip it if you have only a handful of tools that are used almost every request.
 
+<a id="install"></a>
+
 ## Install rc.9
 
 Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, and `pnpm` on `PATH`. The `dsh plugin` command delegates installation to pnpm.

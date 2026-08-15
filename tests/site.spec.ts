@@ -278,6 +278,8 @@ describe('catalog calculator publishing contract', () => {
     ])
 
     expect(home).toContain('href="./1000-tool-tax/"')
+    expect(home).toContain('href="https://github.com/labmimors/dsh-mcp-lens#install"')
+    expect(home).not.toContain('#install-in-30-seconds')
     expect(english).toContain('rel="canonical" href="https://labmimors.github.io/dsh-mcp-lens/1000-tool-tax/"')
     expect(chinese).toContain('rel="canonical" href="https://labmimors.github.io/dsh-mcp-lens/zh-CN/1000-tool-tax/"')
     expect(english).toContain('href="../styles.css"')
@@ -405,10 +407,12 @@ describe('catalog calculator publishing contract', () => {
     }
 
     expect(englishReadme).toContain('The rc.9 Release page lists the `.tgz` asset')
+    expect(englishReadme).toContain('<a id="install"></a>')
     expect(englishReadme).not.toContain('become valid after its Release page')
     expect(englishReadme).not.toContain('After the rc.9 tag is published')
     expect(englishReadme).not.toContain('the link resolves after publication')
     expect(chineseReadme).toContain('rc.9 Release 页面已经列出 `.tgz` 附件')
+    expect(chineseReadme).toContain('<a id="install"></a>')
     expect(chineseReadme).not.toContain('下面的命令为 rc.9 预先准备')
     expect(chineseReadme).not.toContain('rc.9 Tag 发布后')
     expect(chineseReadme).not.toContain('发布后链接才会生效')
