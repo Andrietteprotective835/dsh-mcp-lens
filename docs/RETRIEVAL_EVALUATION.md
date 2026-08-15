@@ -2,7 +2,7 @@
 
 English | [简体中文](RETRIEVAL_EVALUATION.zh-CN.md)
 
-This report records the frozen retrieval evidence for MCP Lens `v0.1.0-rc.8`. The evaluation is **derived from MCP-Atlas but is not an official MCP-Atlas score**. It measures deterministic covered-call lexical retrieval in one fixed catalog, not end-to-end task execution.
+This report carries the frozen retrieval evidence forward for the MCP Lens `v0.1.0-rc.9` candidate. The one scored evaluation was run for the rc.8 ranker; rc.9 changes index construction and reuse, not the ranking contract. The evaluation is **derived from MCP-Atlas but is not an official MCP-Atlas score**. It measures deterministic covered-call lexical retrieval in one fixed catalog, not end-to-end task execution.
 
 ## Result
 
@@ -17,6 +17,12 @@ The convenience holdout contains 304 untouched prompts over 15 real MCP servers 
 | Hit@5 | 0.138158 | 0.361842 | +0.223684 |
 
 For the primary Recall@5 metric, prompt-level wins/ties/losses were `99/197/8`. A deterministic paired bootstrap with 100,000 replicates produced a 95% interval of `[0.144846, 0.224342]` for the candidate-minus-baseline difference.
+
+### rc.9 label-free compatibility replay
+
+After the frozen search-index cache was implemented, a read-only replay compared the rc.9 candidate's integrated `searchCatalog()` output with the already-frozen candidate ranking artifact. All `304/304` public prompts over 102 tools matched in ranking order and score. The replay verified public artifact hashes, ran with network and filesystem writes denied, and read no private labels, score output, or score receipt.
+
+This is parity evidence only. It shows that the rc.9 index-reuse optimization preserved the frozen public ranking output; it is not a second holdout scoring run and does not add a new quality, latency, or cost result.
 
 ## Frozen method
 
@@ -47,6 +53,7 @@ These digests let reviewers bind aggregate claims to the frozen inputs and outpu
 | Frozen candidate | `2894dd35e37a1fb7a1431941780fd7b0748eea5fa452fc79190fc9ffb6a297e3` |
 | Final handoff | `1f5c8fe41139ff3ef8bb6a647af48149104b8bae6fd17ec35c0ba12303da54b3` |
 | Frozen rankings | `f3c1aaa550cb8cc64af3b7dd70d80ffc26136ed4f0ed711da0b0dfada81730db` |
+| Ranking receipt | `2175e971e005fd3d48edacdf269c026afdf95c99b0ca8fc607e7891adbe4167e` |
 | Aggregate scores | `cd5b594a023d737e1aa8d07f1487976c696efa512d81b7a16604e86a9b7713ef` |
 | Score receipt | `558fb75eef75ee1d003a09fb7cac5dcdcc81d7042009a4cd9e1f9ac805d7dca8` |
 

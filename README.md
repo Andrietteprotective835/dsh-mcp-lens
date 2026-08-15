@@ -16,27 +16,27 @@ Why users install it:
 - Spend less on input-heavy turns: in the dated three-task pilot, estimated DeepSeek V4 Flash cost fell from `$0.0307204` to `$0.0034707`.
 - Keep more room for the real task: the same pilot reduced `request/header.tools` JSON from `674,249 B` to `27,401 B`.
 - Retrieve more relevant covered calls: on a frozen MCP-Atlas-derived convenience holdout, Recall@5 rose from `0.062610` to `0.246656` across 304 untouched prompts. This is lexical retrieval evidence, not an official MCP-Atlas or end-to-end score.
+- Avoid rebuilding the same search index on every query: rc.9 reuses the tokenized index for each Lens-owned frozen catalog and policy generation, then invalidates it when the catalog changes.
 - Narrow the tool-choice surface: search reveals only a small ranked set of exact schemas, and the final `server/tool` is still gated by `allowTools` and `denyTools`.
 - Preserve completion in the tested pilot: both arms completed `3/3` tasks, while Lens used one extra search step.
 
 Use MCP Lens if you have dozens to thousands of MCP tools, multiple servers, or long-tail tools that are expensive to advertise on every turn. Skip it if you have only a handful of tools that are used almost every request.
 
-## Install in 30 seconds
+## Install rc.9
 
 Prerequisites: DeepSeek Harness `0.1.0-rc.6`, Node.js `^22.19.0` or `>=24.0.0`, and `pnpm` on `PATH`. The `dsh plugin` command delegates installation to pnpm.
 
-Download and verify the prebuilt release, then install the local file into your Harness profile. Passing a redirected GitHub asset URL directly to pnpm can fail with `ERR_PNPM_MISSING_TARBALL_INTEGRITY` on some pnpm versions.
+The commands below are prepared for rc.9 and become valid after its Release page lists the `.tgz` asset and SHA-256 digest. Download the file, compare its digest with the value shown for that exact Release asset, and only then install the local file into your Harness profile. Passing a redirected GitHub asset URL directly to pnpm can fail with `ERR_PNPM_MISSING_TARBALL_INTEGRITY` on some pnpm versions.
 
 ```sh
-curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.8.tgz \
-  https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
-printf '%s  %s\n' \
-  'a930b5166ffe1cf1de4032d69289de935c444c94cf01b2a5ca5ad58949b91fa0' \
-  'dsh-mcp-lens-0.1.0-rc.8.tgz' | shasum -a 256 -c -
-dsh plugin --profile web add ./dsh-mcp-lens-0.1.0-rc.8.tgz
+curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.9.tgz \
+  https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.9/dsh-mcp-lens-0.1.0-rc.9.tgz
+shasum -a 256 dsh-mcp-lens-0.1.0-rc.9.tgz
+# Compare the output with the SHA-256 shown for the .tgz on the rc.9 Release page.
+dsh plugin --profile web add ./dsh-mcp-lens-0.1.0-rc.9.tgz
 ```
 
-On Windows, download the same asset from the [rc.8 release](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8), verify it with `Get-FileHash -Algorithm SHA256`, and pass its local path to `dsh plugin add`.
+On Windows, download the same asset from the [rc.9 Release page](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9), compare `Get-FileHash -Algorithm SHA256` with the digest shown for that asset, and pass its local path to `dsh plugin add` only if they match.
 
 The three-command block downloads, verifies, and installs the plugin. To make it useful, continue with [Connect your first MCP server](#connect-your-first-mcp-server); its copy-paste block adds both a server and the exact tools you want to allow. Then validate and start the profile:
 
@@ -79,13 +79,15 @@ For an immutable production reference, pin the reviewed rc.7 commit: `f21169f921
 
 In the live pilot, MCP Lens and the official direct client both completed **3/3 tasks**. Lens used one extra search step and more output tokens, so it is designed for large, multi-server, or long-tail catalogs, not a handful of tools used on every turn. See the [full pilot report](docs/LIVE_DEEPSEEK_PILOT.md).
 
-The tarball is already built, so no dependency build permission is needed. The MCP documentation server used below requires no additional API key; Harness still needs your configured model provider.
+The Release asset is a prebuilt tarball, so it needs no dependency build permission. The MCP documentation server used below requires no additional API key; Harness still needs your configured model provider.
 
 <details>
 <summary>Install reviewed source instead</summary>
 
+After the rc.9 tag is published:
+
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.8
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.9
 ```
 
 Git installs fetch source and run `prepare`. With pnpm 10+, add this exact package key to `$DSH_HOME/profiles/web/pnpm-workspace.yaml` (default `~/.dsh/profiles/web/pnpm-workspace.yaml`), then rerun the command:
@@ -185,6 +187,13 @@ Lens trades a search step on first use for a nearly constant standing MCP schema
 
 **Speed:** there is no universal latency win to claim. The first uncached use adds search and connection work; smaller requests may offset that cost on large catalogs, so measure your own workload.
 
+### What rc.9 changes
+
+- Search tokenizes and sorts each Lens-owned, deeply frozen visible catalog once, then reuses that in-memory index for repeated queries under the same frozen policy. A refresh creates a new snapshot identity and therefore a new index; caller-owned mutable snapshots are never identity-cached.
+- The one-edit typo fallback now uses a linear-time exactly-one-edit check and fails closed after 250,000 name/title candidate tokens, bounding its only vocabulary-scan route.
+- A label-free replay against the frozen public Holdout B inputs matched the sealed rc.8 candidate rankings and per-result scores for all `304/304` prompts over 102 tools. That replay read no private labels, aggregate score output, or score receipt; it verifies ranking parity, not a new evaluation result.
+- The full source checkout passes `97/97` automated tests, typechecking, and build. The compact runtime package intentionally excludes the test and benchmark runners.
+
 ## Measured results
 
 ### Frozen retrieval holdout
@@ -197,7 +206,7 @@ We evaluated the rc.8 ranker once on an **MCP-Atlas-derived convenience holdout*
 | MRR | 0.119999 | 0.258684 | +0.138685 |
 | nDCG@5 | 0.051830 | 0.204307 | +0.152477 |
 
-The rc.7 runtime ranker is byte-identical to the rc.6 runtime baseline used by the evaluator. The Recall@5 difference has a 100,000-replicate paired-bootstrap 95% CI of `[0.144846, 0.224342]`; prompt-level wins/ties/losses are `99/197/8`. This result covers **covered-call lexical retrieval only**. It does not measure end-to-end task completion, tokens, cost, latency, semantic retrieval, or general product quality. See the [method, boundaries, and artifact commitments](docs/RETRIEVAL_EVALUATION.md).
+The rc.7 runtime ranker is byte-identical to the rc.6 runtime baseline used by the evaluator. The Recall@5 difference has a 100,000-replicate paired-bootstrap 95% CI of `[0.144846, 0.224342]`; prompt-level wins/ties/losses are `99/197/8`. The rc.9 search-index change reproduced the frozen candidate's public rankings and per-result scores for `304/304` prompts without reading private labels, aggregate score output, or score receipt. This result covers **covered-call lexical retrieval only**. It does not measure end-to-end task completion, tokens, cost, latency, semantic retrieval, or general product quality. See the [method, boundaries, and artifact commitments](docs/RETRIEVAL_EVALUATION.md).
 
 ### Live DeepSeek V4 Flash pilot
 
@@ -226,7 +235,7 @@ The checked-in benchmark uses a real Harness `Context`, `SystemPrompt`, and `Too
 
 At 1,000 tools, the official client registers 1,000 remote schemas while Lens still registers two. On the frozen 12-query retrieval fixture, Lens measured Recall@1 / Recall@5 / MRR = `1.0 / 1.0 / 1.0`. That fixture was authored for this repository, so treat it as a regression guard—not independent evidence of real-world retrieval quality.
 
-Reproduce the component result without an API key:
+Reproduce the component result without an API key from a full source checkout:
 
 ```sh
 npm ci
@@ -234,7 +243,7 @@ npm run verify
 npm run bench -- --output benchmark.json
 ```
 
-The exact metric, fixture, dependency versions, source digest, and measurement limits are in [`benchmark/README.md`](benchmark/README.md).
+These are source-checkout scripts. The compact prebuilt runtime package deliberately excludes `scripts/`, tests, benchmark sources, and build configuration; unpacking the `.tgz` is not a supported way to run `npm run verify` or `npm run bench`. The exact metric, fixture, dependency versions, source digest, and measurement limits are in [`benchmark/README.md`](benchmark/README.md).
 
 ## Keep schema drift out of CI
 
@@ -268,6 +277,7 @@ The action accepts files up to 64 MiB, resolves the input inside `GITHUB_WORKSPA
 - **Lazy by default:** no MCP process or socket at plugin activation; idle connections close automatically.
 - **Failure isolation:** catalog refreshes run per server; one failure does not hide healthy servers.
 - **Last-good behavior:** failed or oversized discovery never replaces a usable catalog generation.
+- **Frozen search index:** repeated queries reuse one tokenized index per immutable visible catalog generation; refreshes invalidate by snapshot identity.
 - **Bounded input:** deadlines and caps cover pagination, tool count, per-tool bytes, total catalog bytes, cursors, and streamed HTTP responses.
 - **Credential-aware cache:** the owner-only `0600` cache stores projected tool metadata, never explicit env/header values or URL credentials.
 - **Exact policy:** search and call share the same allow/deny decision at the final `server/tool` identity.
@@ -312,7 +322,7 @@ See the shipped [`cordis.patch.yml`](cordis.patch.yml) for the canonical default
 - Security reports: read [`SECURITY.md`](SECURITY.md); do not disclose an unpatched exploit in a public issue.
 - Contributions: read [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Search quality: [submit a sanitized search miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml) and help turn it into a regression fixture.
-- Release: [`v0.1.0-rc.8`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8).
+- Release candidate: [`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9) (the link resolves after publication).
 
 DeepSeek Harness currently discovers community plugins through public GitHub repositories with the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic and installs them from GitHub, tarballs, or npm packages. See the official [plugin publishing guide](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.md).
 

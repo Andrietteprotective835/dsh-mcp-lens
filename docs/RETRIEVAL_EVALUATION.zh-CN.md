@@ -2,7 +2,7 @@
 
 [English](RETRIEVAL_EVALUATION.md) | 简体中文
 
-本文记录 MCP Lens `v0.1.0-rc.8` 的冻结检索证据。该评测**源自 MCP-Atlas，但不是 MCP-Atlas 官方分数**。它测量固定目录中的确定性 covered-call 词法检索，不是端到端任务执行评测。
+本文为 MCP Lens `v0.1.0-rc.9` Candidate 延续冻结检索证据。唯一一次计分评测针对 rc.8 排序器；rc.9 改变的是索引构建与复用，不是排序契约。该评测**源自 MCP-Atlas，但不是 MCP-Atlas 官方分数**。它测量固定目录中的确定性 covered-call 词法检索，不是端到端任务执行评测。
 
 ## 结果
 
@@ -17,6 +17,12 @@
 | Hit@5 | 0.138158 | 0.361842 | +0.223684 |
 
 主指标 Recall@5 的逐 Prompt 胜／平／负为 `99/197/8`。使用 100,000 次重复的确定性 paired bootstrap 后，candidate-minus-baseline 差值的 95% 区间为 `[0.144846, 0.224342]`。
+
+### rc.9 无标签兼容性重放
+
+冻结搜索索引缓存完成后，一次只读重放把 rc.9 Candidate 集成后的 `searchCatalog()` 输出与已经冻结的 Candidate Ranking 工件进行比较。在 102 个工具上的 `304/304` 个公开 Prompt 中，Ranking 顺序与 Score 全部一致。重放先校验公开工件 Hash，在拒绝网络与文件系统写入的环境中运行，并且没有读取私有标签、Score 输出或 Score Receipt。
+
+这只属于一致性证据：它说明 rc.9 的索引复用优化保留了冻结公开 Ranking 输出，不是第二次 Holdout 计分，也没有产生新的质量、延迟或费用结论。
 
 ## 冻结方法
 
@@ -47,6 +53,7 @@ candidate v3 使用按字段加权的准确词法匹配。Fallback 被刻意限�
 | 冻结 Candidate | `2894dd35e37a1fb7a1431941780fd7b0748eea5fa452fc79190fc9ffb6a297e3` |
 | 最终 Handoff | `1f5c8fe41139ff3ef8bb6a647af48149104b8bae6fd17ec35c0ba12303da54b3` |
 | 冻结 Rankings | `f3c1aaa550cb8cc64af3b7dd70d80ffc26136ed4f0ed711da0b0dfada81730db` |
+| Ranking Receipt | `2175e971e005fd3d48edacdf269c026afdf95c99b0ca8fc607e7891adbe4167e` |
 | 聚合 Scores | `cd5b594a023d737e1aa8d07f1487976c696efa512d81b7a16604e86a9b7713ef` |
 | Score Receipt | `558fb75eef75ee1d003a09fb7cac5dcdcc81d7042009a4cd9e1f9ac805d7dca8` |
 
