@@ -348,6 +348,13 @@ describe('catalog calculator publishing contract', () => {
     expect(chinesePilot).toContain(`DeepSeek Harness：\`${harnessPilotVersion}\``)
   })
 
+  it('keeps the published tarball free of development-only packaging files', async () => {
+    const packageJson = await readFile(join(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse)
+    expect(packageJson.files).not.toContain('scripts')
+    expect(packageJson.files).not.toContain('tsconfig.json')
+    expect(packageJson.files).not.toContain('tsdown.config.ts')
+  })
+
   it('pins every Pages action to the reviewed immutable revision', async () => {
     const workflow = await readFile(join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8')
     expect(workflow).toContain('actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5')
