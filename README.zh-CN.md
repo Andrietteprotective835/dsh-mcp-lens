@@ -25,13 +25,20 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 
 前置要求：DeepSeek Harness `0.1.0-rc.6`、Node.js `^22.19.0` 或 `>=24.0.0`，并且 `pnpm` 已在 `PATH` 中。`dsh plugin` 会把安装交给 pnpm 执行。
 
-把预编译 Release 安装到 Harness Profile：
+先下载并校验预编译 Release，再把本地文件安装到 Harness Profile。某些 pnpm 版本直接接收 GitHub 重定向后的附件 URL 时会报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`。
 
 ```sh
-dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
+curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.8.tgz \
+  https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
+printf '%s  %s\n' \
+  'a930b5166ffe1cf1de4032d69289de935c444c94cf01b2a5ca5ad58949b91fa0' \
+  'dsh-mcp-lens-0.1.0-rc.8.tgz' | shasum -a 256 -c -
+dsh plugin --profile web add ./dsh-mcp-lens-0.1.0-rc.8.tgz
 ```
 
-安装只需要这一条命令。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
+Windows 用户可从 [rc.8 Release](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8) 下载同一附件，使用 `Get-FileHash -Algorithm SHA256` 校验后，把本地路径交给 `dsh plugin add`。
+
+上面的三条命令依次完成下载、校验和安装。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
 
 ```sh
 dsh --profile web --dump-config
