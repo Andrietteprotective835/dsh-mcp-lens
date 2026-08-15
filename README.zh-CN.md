@@ -16,27 +16,27 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 - 更省输入成本：在带日期的三任务实测里，DeepSeek V4 Flash 预估费用从 `$0.0307204` 降到 `$0.0034707`。
 - 更少占上下文：同一组实测里，`request/header.tools` JSON 从 `674,249 B` 降到 `27,401 B`。
 - 更容易找回相关的已覆盖调用：在冻结的 MCP-Atlas 衍生便利 Holdout 上，304 个未触碰 Prompt 的 Recall@5 从 `0.062610` 提升到 `0.246656`。这只是词法检索证据，不是 MCP-Atlas 官方分数或端到端成绩。
+- 避免每次查询重复构建同一索引：rc.9 会复用每个 Lens 自有冻结目录与策略世代的分词索引，并在目录变化时自动失效。
 - 缩小模型的选工具范围：搜索只揭示少量排序候选的准确 Schema，最终 `server/tool` 仍然受 `allowTools` / `denyTools` 限制。
 - 在已测任务里保持完成率：真模型实测两侧都完成 `3/3`，Lens 多用了一次搜索步骤。
 
 如果你有几十到几千个 MCP 工具、多个 Server，或者很多长尾能力不值得每轮都暴露给模型，这个插件适合你。只有几个固定工具、而且几乎每轮都会用到时，直接客户端通常更简单。
 
-## 30 秒安装
+## 安装 rc.9
 
 前置要求：DeepSeek Harness `0.1.0-rc.6`、Node.js `^22.19.0` 或 `>=24.0.0`，并且 `pnpm` 已在 `PATH` 中。`dsh plugin` 会把安装交给 pnpm 执行。
 
-先下载并校验预编译 Release，再把本地文件安装到 Harness Profile。某些 pnpm 版本直接接收 GitHub 重定向后的附件 URL 时会报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`。
+下面的命令为 rc.9 预先准备；只有当 Release 页面列出 `.tgz` 附件与 SHA-256 后才可执行。先下载文件，把本地摘要与该附件显示的摘要逐字比较，确认一致后再把本地文件安装到 Harness Profile。某些 pnpm 版本直接接收 GitHub 重定向后的附件 URL 时会报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`。
 
 ```sh
-curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.8.tgz \
-  https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz
-printf '%s  %s\n' \
-  'a930b5166ffe1cf1de4032d69289de935c444c94cf01b2a5ca5ad58949b91fa0' \
-  'dsh-mcp-lens-0.1.0-rc.8.tgz' | shasum -a 256 -c -
-dsh plugin --profile web add ./dsh-mcp-lens-0.1.0-rc.8.tgz
+curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.9.tgz \
+  https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.9/dsh-mcp-lens-0.1.0-rc.9.tgz
+shasum -a 256 dsh-mcp-lens-0.1.0-rc.9.tgz
+# 与 rc.9 Release 页面中 .tgz 附件显示的 SHA-256 逐字比较。
+dsh plugin --profile web add ./dsh-mcp-lens-0.1.0-rc.9.tgz
 ```
 
-Windows 用户可从 [rc.8 Release](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8) 下载同一附件，使用 `Get-FileHash -Algorithm SHA256` 校验后，把本地路径交给 `dsh plugin add`。
+Windows 用户可从 [rc.9 Release 页面](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9)下载同一附件，把 `Get-FileHash -Algorithm SHA256` 的结果与附件显示的摘要逐字比较；只有一致时才把本地路径交给 `dsh plugin add`。
 
 上面的三条命令依次完成下载、校验和安装。要真正开始使用，请继续完成[连接第一个 MCP Server](#连接第一个-mcp-server)；其中的复制粘贴配置会同时添加 Server 和你要放行的准确工具。然后验证并启动 Profile：
 
@@ -79,13 +79,15 @@ dsh --profile web
 
 在 DeepSeek 实测中，MCP Lens 和官方直接客户端都完成了 **3/3 项任务**。Lens 会多一次搜索，并在这组样本中产生更多输出 Token，因此它针对的是大型、多 Server、长尾工具库，而不是每轮都会用到的几个固定工具。完整数据见[中文实测报告](docs/LIVE_DEEPSEEK_PILOT.zh-CN.md)。
 
-这个 tarball 已完成构建，不需要依赖构建权限。下面使用的 MCP 文档 Server 不需要额外 API Key；Harness 仍然需要你已经配置好的模型 Provider。
+Release 附件是预编译 tarball，不需要依赖构建权限。下面使用的 MCP 文档 Server 不需要额外 API Key；Harness 仍然需要你已经配置好的模型 Provider。
 
 <details>
 <summary>改为安装已审核的源码</summary>
 
+rc.9 Tag 发布后：
+
 ```sh
-dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.8
+dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.9
 ```
 
 Git 安装会下载源码并运行 `prepare`。使用 pnpm 10+ 时，请在 `$DSH_HOME/profiles/web/pnpm-workspace.yaml`（默认 `~/.dsh/profiles/web/pnpm-workspace.yaml`）中加入准确包名，然后重新安装：
@@ -185,6 +187,13 @@ Lens 用首次使用时的一次搜索，换取接近恒定的常驻 MCP Schema 
 
 **速度：**目前没有可以普遍承诺的延迟提升。首次未缓存使用会增加搜索和连接工作；大型工具库的较小请求可能抵消这部分开销，请以自己的工作负载实测。
 
+### rc.9 改了什么
+
+- 搜索只为每个 Lens 自有、深度冻结的可见目录构建一次分词与排序索引；相同冻结策略下的后续查询直接复用。目录刷新会产生新的 Snapshot 身份并重建索引；调用方持有的可变 Snapshot 永远不会进入身份缓存。
+- edit-distance-one 拼写容错改为线性时间的准确单编辑检查，并在扫描 250,000 个名称／标题候选 Token 后 fail-closed，为唯一的词表扫描路径设置上限。
+- 一次无标签重放在冻结的公开 Holdout B 输入上，对 102 个工具的 `304/304` 个 Prompt 全部复现 sealed rc.8 candidate 的 Ranking 与逐结果 Score。该重放没有读取私有标签、聚合 Score 输出或 Score Receipt；它证明排序一致，不是一次新的评测。
+- 完整源码 Checkout 已通过 `98/98` 个自动化测试、类型检查与构建；精简 Runtime 包刻意不携带测试和 Benchmark Runner。
+
 ## 实测结果
 
 ### 冻结检索 Holdout
@@ -197,7 +206,7 @@ Lens 用首次使用时的一次搜索，换取接近恒定的常驻 MCP Schema 
 | MRR | 0.119999 | 0.258684 | +0.138685 |
 | nDCG@5 | 0.051830 | 0.204307 | +0.152477 |
 
-rc.7 的 Runtime 排序器与评测所用 rc.6 Runtime Baseline 逐字节相同。Recall@5 差值在 100,000 次 paired bootstrap 下的 95% CI 为 `[0.144846, 0.224342]`，逐 Prompt 胜／平／负为 `99/197/8`。这个结果只覆盖 **covered-call 词法检索**，不测量端到端任务完成、Token、费用、延迟、语义检索或通用产品质量。方法、边界和工件摘要见[中文检索评测报告](docs/RETRIEVAL_EVALUATION.zh-CN.md)。
+rc.7 的 Runtime 排序器与评测所用 rc.6 Runtime Baseline 逐字节相同。Recall@5 差值在 100,000 次 paired bootstrap 下的 95% CI 为 `[0.144846, 0.224342]`，逐 Prompt 胜／平／负为 `99/197/8`。rc.9 的搜索索引改动在不读取私有标签、聚合 Score 输出或 Score Receipt 的前提下，复现了冻结 Candidate 在 `304/304` 个 Prompt 上的公开 Ranking 与逐结果 Score。这个结果只覆盖 **covered-call 词法检索**，不测量端到端任务完成、Token、费用、延迟、语义检索或通用产品质量。方法、边界和工件摘要见[中文检索评测报告](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/docs/RETRIEVAL_EVALUATION.zh-CN.md)。
 
 ### DeepSeek V4 Flash 真模型实测
 
@@ -226,7 +235,7 @@ rc.7 的 Runtime 排序器与评测所用 rc.6 Runtime Baseline 逐字节相同�
 
 在 1,000 工具规模下，官方客户端注册 1,000 个远端 Schema，Lens 仍然只注册两个。在固定的 12 查询检索 Fixture 上，Lens 的 Recall@1 / Recall@5 / MRR 为 `1.0 / 1.0 / 1.0`。该 Fixture 由本仓库编写，因此只能作为回归保护，不能视为真实场景检索质量的独立证据。
 
-无需 API Key 即可复现组件结果：
+在完整源码 Checkout 中，无需 API Key 即可复现组件结果：
 
 ```sh
 npm ci
@@ -234,7 +243,7 @@ npm run verify
 npm run bench -- --output benchmark.json
 ```
 
-准确指标、Fixture、依赖版本、源码摘要和测量限制见 [`benchmark/README.md`](benchmark/README.md)。
+这些命令只面向完整源码 Checkout。精简的预编译 Runtime 包会刻意排除 `scripts/`、测试、Benchmark 源码与构建配置；解包 `.tgz` 后运行 `npm run verify` 或 `npm run bench` 不属于支持契约。准确指标、Fixture、依赖版本、源码摘要和测量限制见 [`benchmark/README.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/benchmark/README.md)。
 
 ## 在 CI 里阻止 Schema 失控增长
 
@@ -268,6 +277,7 @@ Action 接受最大 64 MiB 的文件，把输入限制在 `GITHUB_WORKSPACE` 内
 - **默认懒加载：**插件激活时没有 MCP 进程或 Socket；空闲连接会自动关闭。
 - **故障隔离：**每个 Server 独立刷新目录；一个 Server 失败不会遮蔽其他健康结果。
 - **last-good：**超时、异常或超限的发现结果不会替换可用目录。
+- **冻结搜索索引：**重复查询复用每个不可变可见目录世代的分词索引；刷新通过新的 Snapshot 身份使旧索引失效。
 - **输入有上限：**分页、工具数量、单工具字节、目录总字节、游标和流式 HTTP 响应都有时限或容量限制。
 - **凭据感知缓存：**权限为 `0600` 的缓存只保存投影后的工具元数据，不保存显式 env/header 值或 URL 凭据。
 - **准确策略：**搜索和调用在最终 `server/tool` 身份上使用同一个 allow/deny 判定。
@@ -310,9 +320,9 @@ MCP Lens 不是沙箱：stdio Server 仍会在宿主机执行，HTTP Server 仍�
 - 隐私与数据边界：[`PRIVACY.md`](PRIVACY.md)。
 - 支持渠道与响应目标：[`SUPPORT.md`](SUPPORT.md)。
 - 安全问题：阅读 [`SECURITY.md`](SECURITY.md)，不要在公开 Issue 中披露未修复漏洞。
-- 参与贡献：阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+- 参与贡献：阅读 [`CONTRIBUTING.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/CONTRIBUTING.md)。
 - 搜索质量：[提交脱敏后的搜索 Miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)，帮助把真实失败转成回归 Fixture。
-- 当前 Release：[`v0.1.0-rc.8`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.8)。
+- Release Candidate：[`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9)（发布后链接才会生效）。
 
 DeepSeek Harness 当前通过带有 [`dsh-plugin`](https://github.com/topics/dsh-plugin) Topic 的公开 GitHub 仓库发现社区插件，并支持从 GitHub、tarball 或 npm 包安装。详见官方[插件发布教程](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md)。
 

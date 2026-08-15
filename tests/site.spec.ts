@@ -47,10 +47,17 @@ function localMarkdownTargets(markdown: string): string[] {
     .map(target => decodeURIComponent(target.split('#', 1)[0] ?? ''))
 }
 
+function packageManifestIncludes(files: readonly string[], target: string): boolean {
+  const normalizedTarget = target.replace(/^\.\//, '')
+  return files.some(entry => {
+    const normalizedEntry = entry.replace(/^\.\//, '').replace(/\/+$/, '')
+    return normalizedTarget === normalizedEntry || normalizedTarget.startsWith(`${normalizedEntry}/`)
+  })
+}
+
 const frozenPilotDate = '2026-08-14'
 const repositoryImageUrl = 'https://repository-images.githubusercontent.com/1334222997/ee14cb30-45a1-42fb-bb6b-e606ec8b3078'
-const lensReleaseCandidate = '0.1.0-rc.8'
-const lensReleasePackageSha256 = 'a930b5166ffe1cf1de4032d69289de935c444c94cf01b2a5ca5ad58949b91fa0'
+const lensReleaseCandidate = '0.1.0-rc.9'
 const schemaActionRelease = '0.1.0-rc.7'
 const harnessPilotVersion = '0.1.0-rc.6'
 const immutableCandidateRevision = 'f21169f921e7ed032a4db5062685afb6f948c2d1'
@@ -239,6 +246,25 @@ describe('catalog calculator publishing contract', () => {
     expect(appSource).not.toContain('benchmark.json and benchmark/README.md')
   })
 
+  it('keeps every packed README local link inside the declared package surface', async () => {
+    const [packageJson, english, chinese] = await Promise.all([
+      readFile(join(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse) as Promise<{ files: string[] }>,
+      readFile(join(repositoryRoot, 'README.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'README.zh-CN.md'), 'utf8'),
+    ])
+    const tagRoot = `https://github.com/labmimors/dsh-mcp-lens/blob/v${lensReleaseCandidate}`
+
+    expect(english).toContain(`${tagRoot}/docs/RETRIEVAL_EVALUATION.md`)
+    expect(chinese).toContain(`${tagRoot}/docs/RETRIEVAL_EVALUATION.zh-CN.md`)
+    for (const readme of [english, chinese]) {
+      expect(readme).toContain(`${tagRoot}/benchmark/README.md`)
+      expect(readme).toContain(`${tagRoot}/CONTRIBUTING.md`)
+      for (const target of localMarkdownTargets(readme)) {
+        expect(packageManifestIncludes(packageJson.files, target), target).toBe(true)
+      }
+    }
+  })
+
   it('publishes bilingual, crawlable study pages with the frozen pilot boundary', async () => {
     const englishPath = join(siteRoot, '1000-tool-tax', 'index.html')
     const chinesePath = join(siteRoot, 'zh-CN', '1000-tool-tax', 'index.html')
@@ -310,19 +336,40 @@ describe('catalog calculator publishing contract', () => {
     expect(styles).toContain('width: min(1040px, calc(100% - 20px));')
   })
 
-  it('identifies the Lens rc.8 candidate without rewriting rc.6 Harness dependencies, pilot history, or the rc.7 Action', async () => {
-    const [packageJson, shrinkwrap, englishReadme, chineseReadme, englishPilot, chinesePilot] = await Promise.all([
+  it('identifies the Lens rc.9 candidate without rewriting rc.6 Harness dependencies, pilot history, or the rc.7 Action', async () => {
+    const [
+      packageJson,
+      shrinkwrap,
+      englishReadme,
+      chineseReadme,
+      englishPilot,
+      chinesePilot,
+      englishRetrieval,
+      chineseRetrieval,
+    ] = await Promise.all([
       readFile(join(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse),
       readFile(join(repositoryRoot, 'npm-shrinkwrap.json'), 'utf8').then(JSON.parse),
       readFile(join(repositoryRoot, 'README.md'), 'utf8'),
       readFile(join(repositoryRoot, 'README.zh-CN.md'), 'utf8'),
       readFile(join(repositoryRoot, 'docs', 'LIVE_DEEPSEEK_PILOT.md'), 'utf8'),
       readFile(join(repositoryRoot, 'docs', 'LIVE_DEEPSEEK_PILOT.zh-CN.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'docs', 'RETRIEVAL_EVALUATION.md'), 'utf8'),
+      readFile(join(repositoryRoot, 'docs', 'RETRIEVAL_EVALUATION.zh-CN.md'), 'utf8'),
     ])
 
     expect(packageJson.version).toBe(lensReleaseCandidate)
     expect(shrinkwrap.version).toBe(lensReleaseCandidate)
     expect(shrinkwrap.packages[''].version).toBe(lensReleaseCandidate)
+
+    const hostPeers = [
+      '@deepseek-ai/cordis',
+      '@deepseek-ai/dsh-subprocess',
+      '@deepseek-ai/dsh-tools',
+    ]
+    for (const name of hostPeers) {
+      expect(packageJson.peerDependenciesMeta[name]).toEqual({ optional: true })
+      expect(shrinkwrap.packages[''].peerDependenciesMeta[name]).toEqual({ optional: true })
+    }
 
     for (const dependencyGroup of [packageJson.peerDependencies, packageJson.devDependencies]) {
       for (const [name, range] of Object.entries(dependencyGroup)) {
@@ -333,7 +380,9 @@ describe('catalog calculator publishing contract', () => {
     for (const readme of [englishReadme, chineseReadme]) {
       expect(readme).toContain(`/releases/download/v${lensReleaseCandidate}/dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
       expect(readme).toContain('curl -fL --retry 3')
-      expect(readme).toContain(lensReleasePackageSha256)
+      expect(readme).toContain(`shasum -a 256 dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
+      expect(readme).toContain('SHA-256')
+      expect(readme).not.toContain('a930b5166ffe1cf1de4032d69289de935c444c94cf01b2a5ca5ad58949b91fa0')
       expect(readme).toContain(`dsh plugin --profile web add ./dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
       expect(readme).not.toContain(`dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v${lensReleaseCandidate}`)
       expect(readme).toContain(`labmimors/dsh-mcp-lens@v${schemaActionRelease}`)
@@ -341,7 +390,13 @@ describe('catalog calculator publishing contract', () => {
       expect(readme).toContain(`/releases/tag/v${lensReleaseCandidate}`)
       expect(readme).toContain(`labmimors/dsh-mcp-lens@${immutableCandidateRevision}`)
       expect(readme).toContain(`\`${immutableCandidateRevision}\``)
+      expect(readme).toContain('304/304')
+      expect(readme).toContain('98/98')
+      expect(readme).toMatch(/[Ff]rozen search index|冻结搜索索引/)
+      expect(readme).toMatch(/full source checkout|完整源码 Checkout/)
+      expect(readme).toMatch(/compact prebuilt runtime package|精简的预编译 Runtime 包/)
       expect(readme).not.toContain('/releases/download/v0.1.0-rc.6/dsh-mcp-lens-0.1.0-rc.6.tgz')
+      expect(readme).not.toContain('/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz')
       expect(readme).not.toContain('labmimors/dsh-mcp-lens@v0.1.0-rc.6')
       expect(readme).not.toContain('github:labmimors/dsh-mcp-lens#v0.1.0-rc.6')
       expect(readme).not.toContain('51cd0ec8d953576507a404cb06034842914b5b5c')
@@ -351,6 +406,11 @@ describe('catalog calculator publishing contract', () => {
 
     expect(englishPilot).toContain(`DeepSeek Harness: \`${harnessPilotVersion}\``)
     expect(chinesePilot).toContain(`DeepSeek Harness：\`${harnessPilotVersion}\``)
+    for (const retrieval of [englishRetrieval, chineseRetrieval]) {
+      expect(retrieval).toContain(`\`v${lensReleaseCandidate}\``)
+      expect(retrieval).toContain('304/304')
+      expect(retrieval).toContain('2175e971e005fd3d48edacdf269c026afdf95c99b0ca8fc607e7891adbe4167e')
+    }
   })
 
   it('keeps the published tarball free of development-only packaging files', async () => {
@@ -367,8 +427,11 @@ describe('catalog calculator publishing contract', () => {
     ])
     for (const page of pages) {
       expect(page).toContain(`curl -fL -o dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
+      expect(page).toContain(`shasum -a 256 dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
+      expect(page).toContain('SHA-256')
       expect(page).toContain(`dsh plugin --profile web add ./dsh-mcp-lens-${lensReleaseCandidate}.tgz`)
       expect(page).not.toContain(`dsh plugin --profile web add https://github.com/labmimors/dsh-mcp-lens/releases/download/v${lensReleaseCandidate}`)
+      expect(page).not.toContain('/releases/download/v0.1.0-rc.8/dsh-mcp-lens-0.1.0-rc.8.tgz')
     }
   })
 

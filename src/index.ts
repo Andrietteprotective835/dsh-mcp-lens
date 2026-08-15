@@ -14,6 +14,7 @@ import { defineTool, type JsonValue } from '@deepseek-ai/dsh-tools'
 import {
   ToolCatalog,
   catalogToolFromRemote,
+  filterCatalog,
   searchCatalog,
   serverFingerprint,
   writeCatalogCache,
@@ -566,16 +567,6 @@ function hasCredentialScopedConfiguration(server: ServerConfig): boolean {
   if (Object.keys(server.headers ?? {}).length > 0) return true
   const url = new URL(server.url)
   return url.username.length > 0 || url.password.length > 0 || [...url.searchParams].length > 0
-}
-
-function filterCatalog(snapshot: CatalogSnapshot, policy: ToolPolicy): CatalogSnapshot {
-  return {
-    ...snapshot,
-    servers: snapshot.servers.map(server => ({
-      ...server,
-      tools: server.tools.filter(tool => policy.allows(server.name, tool.name)),
-    })),
-  }
 }
 
 function searchResult(hit: CatalogSearchResult, catalog: ToolCatalog, ttlMs: number) {

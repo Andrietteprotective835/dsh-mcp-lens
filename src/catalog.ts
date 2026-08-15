@@ -58,6 +58,10 @@ export interface CatalogSearchOptions {
   readonly server?: string
 }
 
+export interface CatalogToolFilter {
+  allows(server: string, tool: string): boolean
+}
+
 export interface CatalogSearchResult {
   readonly server: string
   readonly fingerprint: string
@@ -131,6 +135,19 @@ const EXACT_FIELD_IDF_PARAMS = {
 // Product integration guard outside the frozen ranker: once policy/server
 // filtering leaves at most two tools, retain exact-hit terms despite high DF.
 const SMALL_VISIBLE_CORPUS_MAX_DOCUMENTS = 2
+
+// One-edit fallback is intentionally secondary to exact retrieval. Bound the
+// only path that scans name/title vocabulary so an allowed 64 MiB catalog
+// cannot turn one typo into unbounded synchronous work.
+const MAX_ONE_EDIT_CANDIDATE_TOKENS = 250_000
+
+// An internal capability, not an Object.isFrozen() heuristic: a caller may
+// shallow-freeze the envelope while leaving schemas mutable.
+const FROZEN_CATALOG_SNAPSHOTS = new WeakSet<CatalogSnapshot>()
+const FILTERED_CATALOGS = new WeakMap<
+  CatalogSnapshot,
+  WeakMap<CatalogToolFilter, CatalogSnapshot>
+>()
 
 export class CatalogSnapshotTooLargeError extends RangeError {
   public readonly actualBytes: number
@@ -260,15 +277,15 @@ export function searchCatalog(
   const limit = normalizeLimit(options.limit)
   if (limit === 0) return []
 
-  const documents = snapshot.servers
-    .filter(server => options.server === undefined || server.name === options.server)
-    .flatMap(server => server.tools.map(tool => indexTool(server, tool)))
+  const indexed = indexedDocuments(snapshot)
+  const documents = options.server === undefined
+    ? indexed
+    : indexed.filter(document => document.server === options.server)
   if (documents.length === 0) return []
 
   const canonicalQueryTerms = tokenizeCanonical(query)
   if (canonicalQueryTerms.length === 0) {
     return documents
-      .sort(compareIndexedDocuments)
       .slice(0, limit)
       .map(document => ({
         server: document.server,
@@ -282,10 +299,50 @@ export function searchCatalog(
   const queryTerms = gateQueryTerms(canonicalQueryTerms, documents)
   if (queryTerms.length === 0) return []
 
-  const exact = rankDocuments(documents, queryTerms, false)
+  const exact = rankDocuments(documents, queryTerms)
   if (exact.length > 0) return exact.slice(0, limit)
   if (!fallbackEligible(queryTerms)) return []
-  return rankDocuments(documents, queryTerms, true).slice(0, limit)
+  const fallback = rankOneEditFallback(documents, queryTerms[0]!)
+  return fallback === undefined ? [] : fallback.slice(0, limit)
+}
+
+/**
+ * Filter one immutable catalog generation once per stable policy identity.
+ * Mutable caller-owned snapshots and policies are never identity-cached.
+ */
+export function filterCatalog(
+  snapshot: CatalogSnapshot,
+  policy: CatalogToolFilter,
+): CatalogSnapshot {
+  const stableSource = FROZEN_CATALOG_SNAPSHOTS.has(snapshot)
+  const cacheable = stableSource && Object.isFrozen(policy)
+  if (cacheable) {
+    const cached = FILTERED_CATALOGS.get(snapshot)?.get(policy)
+    if (cached !== undefined) return cached
+  }
+
+  let changed = false
+  const servers = snapshot.servers.map(server => {
+    const tools = server.tools.filter(tool => policy.allows(server.name, tool.name))
+    if (tools.length === server.tools.length) return server
+    changed = true
+    return { ...server, tools }
+  })
+  const filtered = changed
+    ? stableSource
+      ? freezeSnapshot({ ...snapshot, servers })
+      : { ...snapshot, servers }
+    : snapshot
+
+  if (cacheable) {
+    let byPolicy = FILTERED_CATALOGS.get(snapshot)
+    if (byPolicy === undefined) {
+      byPolicy = new WeakMap<CatalogToolFilter, CatalogSnapshot>()
+      FILTERED_CATALOGS.set(snapshot, byPolicy)
+    }
+    byPolicy.set(policy, filtered)
+  }
+  return filtered
 }
 
 /**
@@ -558,6 +615,22 @@ interface IndexedDocument {
   readonly fields: readonly SearchField[]
 }
 
+const INDEXED_DOCUMENTS = new WeakMap<CatalogSnapshot, readonly IndexedDocument[]>()
+
+function indexedDocuments(snapshot: CatalogSnapshot): readonly IndexedDocument[] {
+  const cacheable = FROZEN_CATALOG_SNAPSHOTS.has(snapshot)
+  if (cacheable) {
+    const cached = INDEXED_DOCUMENTS.get(snapshot)
+    if (cached !== undefined) return cached
+  }
+  const documents = snapshot.servers
+    .flatMap(server => server.tools.map(tool => indexTool(server, tool)))
+    .sort(compareIndexedDocuments)
+  const indexed = Object.freeze(documents)
+  if (cacheable) INDEXED_DOCUMENTS.set(snapshot, indexed)
+  return indexed
+}
+
 function indexTool(server: CatalogServerSnapshot, tool: McpToolMetadata): IndexedDocument {
   const title = typeof tool.title === 'string'
     ? tool.title
@@ -589,10 +662,6 @@ interface GatedQueryTerm {
   readonly documentFrequency: number
 }
 
-interface ScoringQueryTerm extends GatedQueryTerm {
-  readonly oneEditDocumentFrequency: number
-}
-
 function gateQueryTerms(
   terms: readonly string[],
   documents: readonly IndexedDocument[],
@@ -611,24 +680,17 @@ function gateQueryTerms(
 function rankDocuments(
   documents: readonly IndexedDocument[],
   terms: readonly GatedQueryTerm[],
-  oneEditFallback: boolean,
 ): CatalogSearchResult[] {
-  const scoringTerms: readonly ScoringQueryTerm[] = terms.map(term => ({
-    ...term,
-    oneEditDocumentFrequency: oneEditFallback
-      ? oneEditDocumentFrequency(term.term, documents)
-      : 0,
-  }))
   const ranked: CatalogSearchResult[] = []
   for (const document of documents) {
     let total = 0
     let matched = 0
     const matchedTerms: string[] = []
-    for (const term of scoringTerms) {
-      const contribution = bestFieldContribution(document, term, oneEditFallback)
+    for (const term of terms) {
+      const contribution = bestExactFieldContribution(document, term)
       if (contribution.score === 0) continue
       matched += 1
-      if (!contribution.usedOneEdit) matchedTerms.push(term.term)
+      matchedTerms.push(term.term)
       const boundedDocumentFrequency = Math.max(1, contribution.effectiveDocumentFrequency)
       const inverseDocumentFrequency = Math.log(
         1 + ((documents.length - boundedDocumentFrequency + 0.5) / (boundedDocumentFrequency + 0.5)),
@@ -656,17 +718,13 @@ function rankDocuments(
 interface FieldContribution {
   readonly score: number
   readonly effectiveDocumentFrequency: number
-  readonly usedOneEdit: boolean
 }
 
-function bestFieldContribution(
+function bestExactFieldContribution(
   document: IndexedDocument,
-  term: ScoringQueryTerm,
-  oneEditFallback: boolean,
+  term: GatedQueryTerm,
 ): FieldContribution {
   let best = 0
-  let effectiveDocumentFrequency = 0
-  let usedOneEdit = false
   for (const field of document.fields) {
     const settings = EXACT_FIELD_IDF_PARAMS.fields[field.kind]
     const lengthNormalization = 1 / (
@@ -674,20 +732,56 @@ function bestFieldContribution(
     )
     if (field.tokens.has(term.term)) {
       best = Math.max(best, settings.weight * lengthNormalization)
-      effectiveDocumentFrequency = term.documentFrequency
-      usedOneEdit = false
-    }
-    if (!oneEditFallback || (field.kind !== 'name' && field.kind !== 'title')) continue
-    for (const candidate of field.tokens) {
-      if (!isTrueOneEdit(term.term, candidate)) continue
-      const candidateScore = settings.weight * lengthNormalization
-      if (candidateScore <= best) continue
-      best = candidateScore
-      effectiveDocumentFrequency = term.oneEditDocumentFrequency
-      usedOneEdit = true
     }
   }
-  return { score: best, effectiveDocumentFrequency, usedOneEdit }
+  return { score: best, effectiveDocumentFrequency: term.documentFrequency }
+}
+
+interface OneEditMatch {
+  readonly document: IndexedDocument
+  readonly fieldScore: number
+}
+
+/** `undefined` means the global candidate-token budget was exceeded. */
+function rankOneEditFallback(
+  documents: readonly IndexedDocument[],
+  term: GatedQueryTerm,
+): CatalogSearchResult[] | undefined {
+  const matches: OneEditMatch[] = []
+  let candidateTokens = 0
+  for (const document of documents) {
+    let best = 0
+    for (const field of document.fields) {
+      if (field.kind !== 'name' && field.kind !== 'title') continue
+      const settings = EXACT_FIELD_IDF_PARAMS.fields[field.kind]
+      const lengthNormalization = 1 / (
+        1 + settings.b * Math.log2(1 + Math.max(0, field.length - 1))
+      )
+      for (const candidate of field.tokens) {
+        candidateTokens += 1
+        if (candidateTokens > MAX_ONE_EDIT_CANDIDATE_TOKENS) return undefined
+        if (!isTrueOneEdit(term.term, candidate)) continue
+        best = Math.max(best, settings.weight * lengthNormalization)
+      }
+    }
+    if (best > 0) matches.push({ document, fieldScore: best })
+  }
+
+  const documentFrequency = matches.length
+  if (documentFrequency === 0) return []
+  const inverseDocumentFrequency = Math.log(
+    1 + ((documents.length - documentFrequency + 0.5) / (documentFrequency + 0.5)),
+  )
+  const coverage = 1 + EXACT_FIELD_IDF_PARAMS.coverageBonus
+  const ranked = matches.map(({ document, fieldScore }): CatalogSearchResult => ({
+    server: document.server,
+    fingerprint: document.fingerprint,
+    tool: document.tool,
+    score: roundScore(fieldScore * inverseDocumentFrequency * coverage),
+    matchedTerms: [],
+  }))
+  ranked.sort(compareSearchResults)
+  return ranked
 }
 
 function fallbackEligible(terms: readonly GatedQueryTerm[]): boolean {
@@ -702,16 +796,6 @@ function exactDocumentFrequency(term: string, documents: readonly IndexedDocumen
   let count = 0
   for (const document of documents) {
     if (document.fields.some(field => field.tokens.has(term))) count += 1
-  }
-  return count
-}
-
-function oneEditDocumentFrequency(term: string, documents: readonly IndexedDocument[]): number {
-  if (!eligibleLatinTerm(term)) return 0
-  let count = 0
-  for (const document of documents) {
-    if (document.fields.some(field => (field.kind === 'name' || field.kind === 'title')
-      && [...field.tokens].some(candidate => isTrueOneEdit(term, candidate)))) count += 1
   }
   return count
 }
@@ -759,25 +843,32 @@ function eligibleLatinTerm(term: string): boolean {
 function isTrueOneEdit(left: string, right: string): boolean {
   if (!eligibleLatinTerm(left) || !eligibleLatinTerm(right)) return false
   if (Math.abs(left.length - right.length) > 1 || left === right) return false
-  let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
-  for (let row = 1; row <= left.length; row += 1) {
-    const current = [row]
-    let rowMinimum = row
-    for (let column = 1; column <= right.length; column += 1) {
-      const substitution = (previous[column - 1] ?? 0)
-        + (left[row - 1] === right[column - 1] ? 0 : 1)
-      const value = Math.min(
-        (previous[column] ?? 0) + 1,
-        (current[column - 1] ?? 0) + 1,
-        substitution,
-      )
-      current.push(value)
-      rowMinimum = Math.min(rowMinimum, value)
+  if (left.length === right.length) {
+    let differences = 0
+    for (let index = 0; index < left.length; index += 1) {
+      if (left[index] === right[index]) continue
+      differences += 1
+      if (differences > 1) return false
     }
-    if (rowMinimum > 1) return false
-    previous = current
+    return differences === 1
   }
-  return previous[right.length] === 1
+
+  const shorter = left.length < right.length ? left : right
+  const longer = left.length < right.length ? right : left
+  let shortIndex = 0
+  let longIndex = 0
+  let skipped = false
+  while (shortIndex < shorter.length && longIndex < longer.length) {
+    if (shorter[shortIndex] === longer[longIndex]) {
+      shortIndex += 1
+      longIndex += 1
+      continue
+    }
+    if (skipped) return false
+    skipped = true
+    longIndex += 1
+  }
+  return true
 }
 
 function compareSearchResults(left: CatalogSearchResult, right: CatalogSearchResult): number {
@@ -1105,7 +1196,9 @@ function isJsonValue(value: unknown, depth = 0, seen = new Set<object>()): value
 }
 
 function freezeSnapshot(snapshot: CatalogSnapshot): CatalogSnapshot {
-  return deepFreeze(snapshot)
+  const frozen = deepFreeze(snapshot)
+  FROZEN_CATALOG_SNAPSHOTS.add(frozen)
+  return frozen
 }
 
 function deepFreeze<T>(value: T, seen = new Set<object>()): T {
