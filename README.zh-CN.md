@@ -2,6 +2,8 @@
 
 [English](README.md) | 简体中文
 
+[官网](https://deepseek-harness-mcp-lens.charmingkla.chatgpt.site) · [本地 Schema 计算器](https://labmimors.github.io/dsh-mcp-lens/) · [安装 rc.9](#install)
+
 [![verify](https://github.com/labmimors/dsh-mcp-lens/actions/workflows/verify.yml/badge.svg)](https://github.com/labmimors/dsh-mcp-lens/actions/workflows/verify.yml)
 [![release](https://img.shields.io/github/v/release/labmimors/dsh-mcp-lens?include_prereleases)](https://github.com/labmimors/dsh-mcp-lens/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
