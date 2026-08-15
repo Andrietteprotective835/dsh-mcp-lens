@@ -75,7 +75,7 @@
             <li><code>mcp_call(server, tool, arguments)</code> 调用明确指定的远端 Server 与工具。</li>
           </ol>
           <p>远端工具没有消失，Schema 也没有被概括或改写。变化的是时机：完整目录留在本地，准确 Schema 只在搜索命中后进入模型上下文。</p>
-          <p>rc.9 Candidate 只为 Lens 自有的冻结目录与策略世代复用分词索引；刷新会产生新的 Snapshot 身份，调用方持有的可变 Snapshot 永远不会进入身份缓存。一次无标签公开重放在全部 304 个 Holdout Prompt 上复现了冻结 rc.8 Candidate 的 Ranking 与 Score。这是兼容性证据，不是新的质量或延迟结论。</p>
+          <p>rc.9 只为 Lens 自有的冻结目录与策略世代复用分词索引；刷新会产生新的 Snapshot 身份，调用方持有的可变 Snapshot 永远不会进入身份缓存。一次无标签公开重放在全部 304 个 Holdout Prompt 上复现了冻结 rc.8 Candidate 的 Ranking 与 Score。这是兼容性证据，不是新的质量或延迟结论。</p>
           <aside class="article-callout"><strong>安全边界：</strong><code>allowTools</code> 默认空集，<code>denyTools</code> 永远优先；代理新增的 <code>_meta</code>、图标、输出 Schema、签名 URL 与资源正文不会转发给模型。MCP Lens 不是沙箱，配置的 Server 仍会使用宿主机或网络权限执行。</aside>
 
           <h2 id="method">实验固定了什么</h2>
@@ -114,7 +114,7 @@
 
           <h2 id="reproduce">先测量，再决定安装</h2>
           <p><a href="../../">本地目录测量页</a>支持脱敏后的工具数组、<code>{"tools":[...]}</code>、<code>{"schemas":[...]}</code> 或记录的 <code>request.header.tools</code>。页面只在浏览器里计算标准 <code>JSON.stringify(...)</code> 的 UTF-8 字节，不上传粘贴内容。</p>
-          <p>rc.9 Release 页面同时列出 <code>.tgz</code> 附件和 SHA-256 摘要后，先下载文件，把本地摘要与该附件显示的值逐字比较；只有一致时才安装本地路径：</p>
+          <p>rc.9 Release 页面已经列出 <code>.tgz</code> 附件和 SHA-256 摘要。先下载文件，把本地摘要与该附件显示的值逐字比较；只有一致时才安装本地路径：</p>
           <pre><code>curl -fL -o dsh-mcp-lens-0.1.0-rc.9.tgz https://github.com/labmimors/dsh-mcp-lens/releases/download/v0.1.0-rc.9/dsh-mcp-lens-0.1.0-rc.9.tgz
 shasum -a 256 dsh-mcp-lens-0.1.0-rc.9.tgz
 # 与 rc.9 Release 页面中 .tgz 附件显示的 SHA-256 逐字比较。

@@ -22,11 +22,13 @@ MCP Lens 让 DeepSeek Harness 通过两个稳定入口搜索并调用 1,000 个�
 
 如果你有几十到几千个 MCP 工具、多个 Server，或者很多长尾能力不值得每轮都暴露给模型，这个插件适合你。只有几个固定工具、而且几乎每轮都会用到时，直接客户端通常更简单。
 
+<a id="install"></a>
+
 ## 安装 rc.9
 
 前置要求：DeepSeek Harness `0.1.0-rc.6`、Node.js `^22.19.0` 或 `>=24.0.0`，并且 `pnpm` 已在 `PATH` 中。`dsh plugin` 会把安装交给 pnpm 执行。
 
-下面的命令为 rc.9 预先准备；只有当 Release 页面列出 `.tgz` 附件与 SHA-256 后才可执行。先下载文件，把本地摘要与该附件显示的摘要逐字比较，确认一致后再把本地文件安装到 Harness Profile。某些 pnpm 版本直接接收 GitHub 重定向后的附件 URL 时会报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`。
+rc.9 Release 页面已经列出 `.tgz` 附件与 SHA-256。先下载文件，把本地摘要与该附件显示的摘要逐字比较，确认一致后再把本地文件安装到 Harness Profile。某些 pnpm 版本直接接收 GitHub 重定向后的附件 URL 时会报 `ERR_PNPM_MISSING_TARBALL_INTEGRITY`。
 
 ```sh
 curl -fL --retry 3 -o dsh-mcp-lens-0.1.0-rc.9.tgz \
@@ -84,7 +86,7 @@ Release 附件是预编译 tarball，不需要依赖构建权限。下面使用�
 <details>
 <summary>改为安装已审核的源码</summary>
 
-rc.9 Tag 发布后：
+如需改装已审核的 rc.9 源码 Tag：
 
 ```sh
 dsh plugin --profile web add github:labmimors/dsh-mcp-lens#v0.1.0-rc.9
@@ -322,7 +324,7 @@ MCP Lens 不是沙箱：stdio Server 仍会在宿主机执行，HTTP Server 仍�
 - 安全问题：阅读 [`SECURITY.md`](SECURITY.md)，不要在公开 Issue 中披露未修复漏洞。
 - 参与贡献：阅读 [`CONTRIBUTING.md`](https://github.com/labmimors/dsh-mcp-lens/blob/v0.1.0-rc.9/CONTRIBUTING.md)。
 - 搜索质量：[提交脱敏后的搜索 Miss](https://github.com/labmimors/dsh-mcp-lens/issues/new?template=search_miss.yml)，帮助把真实失败转成回归 Fixture。
-- Release Candidate：[`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9)（发布后链接才会生效）。
+- Release Candidate：[`v0.1.0-rc.9`](https://github.com/labmimors/dsh-mcp-lens/releases/tag/v0.1.0-rc.9)。
 
 DeepSeek Harness 当前通过带有 [`dsh-plugin`](https://github.com/topics/dsh-plugin) Topic 的公开 GitHub 仓库发现社区插件，并支持从 GitHub、tarball 或 npm 包安装。详见官方[插件发布教程](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/basic/publish.zh.md)。
 
