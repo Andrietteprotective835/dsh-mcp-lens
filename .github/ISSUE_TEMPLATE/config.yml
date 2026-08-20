@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Security report
-    url: https://github.com/labmimors/dsh-mcp-lens/security/advisories/new
-    about: Privately report a suspected vulnerability.
-  - name: DeepSeek Harness support
-    url: https://github.com/deepseek-ai/deepseek-harness/discussions
-    about: Ask questions about Harness itself in the upstream community.
